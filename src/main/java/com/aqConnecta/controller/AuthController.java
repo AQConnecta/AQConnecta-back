@@ -72,7 +72,28 @@ public class AuthController {
             return service.confirmaEmail(confirmationToken);
         } catch (Exception e) {
             log.error(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
+
+    @RequestMapping(value="/recuperando", method= {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<?> recoveryUser(@RequestParam("token")String confirmationToken, @RequestBody LoginRequest recupera) {
+        try {
+            return service.recuperarSenha(recupera, confirmationToken);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/recuperando-senha")
+    public ResponseEntity<?> recuperandoUser(@RequestBody String email) {
+        try {
+            return service.recuperarSenha(email);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
 }

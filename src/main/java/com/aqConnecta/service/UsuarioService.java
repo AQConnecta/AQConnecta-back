@@ -1,5 +1,6 @@
 package com.aqConnecta.service;
 
+import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
 import com.aqConnecta.model.ConfirmaToken;
 import com.aqConnecta.model.Permissao;
@@ -73,16 +74,20 @@ public class UsuarioService {
 
         confirmaRepository.save(confirmationToken);
 
+        String subject = "Complete a inscrição!";
+        String text = "para confirmar a conta, por favor clique aqui : "
+                +"http://" + url + ":" + port + "/auth/confirma-conta?token="+confirmationToken.getToken();
+        enviaEmail(usuario.getEmail(), subject, text);
+
+        return ResponseEntity.ok("Verifique seu email");
+    }
+
+    private void enviaEmail(String email, String subject, String text) {
         SimpleMailMessage mailMessage = new SimpleMailMessage();
-        mailMessage.setTo(usuario.getEmail());
-        mailMessage.setSubject("Complete a inscrição!");
-        mailMessage.setText("para confirmar a conta, por favor clique aqui : "
-                +"http://" + url + ":" + port + "/auth/confirma-conta?token="+confirmationToken.getToken());
+        mailMessage.setTo(email);
+        mailMessage.setSubject(subject);
+        mailMessage.setText(text);
         emailService.sendEmail(mailMessage);
-
-        System.out.println("Confirmation Token: " + confirmationToken.getToken());
-
-        return ResponseEntity.ok("Verify email by the link sent on your email address");
     }
 
     public ResponseEntity<?> confirmaEmail(String confirmaToken) throws Exception {
@@ -93,7 +98,8 @@ public class UsuarioService {
             Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
             usuario.setAtivado(true);
             usuarioRepository.save(usuario);
-            return ResponseEntity.ok("Email varificado com sucesso!");
+            confirmaRepository.delete(token);
+            return ResponseEntity.ok("Email verificado com sucesso!");
         }
         return ResponseEntity.badRequest().body("Error: Não foi possível verificar o email");
     }
@@ -102,4 +108,39 @@ public class UsuarioService {
         return usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new Exception("Usuário não encontrado para o email: " + email));
     }
+
+    public ResponseEntity<?> recuperarSenha(LoginRequest recupera, String confirmaToken) throws Exception {
+        ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
+
+        if(token != null)
+        {
+            Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
+            usuario.setSenha(encoder.encode(recupera.getSenha()));
+            usuarioRepository.save(usuario);
+            confirmaRepository.delete(token);
+            return ResponseEntity.ok("Senha alterada com sucesso!");
+        }
+        return ResponseEntity.badRequest().body("Error: Não foi possível alterar a senha");
+    }
+
+    public ResponseEntity<?> recuperarSenha(String email) throws Exception {
+        Usuario usuario = localizarPorEmail(email);
+
+        ConfirmaToken confirmationToken = new ConfirmaToken().builder()
+                .token(UUID.randomUUID().toString())
+                .usuario(usuario)
+                .dataCriacao(new Timestamp(System.currentTimeMillis()))
+                .build();
+
+        confirmaRepository.save(confirmationToken);
+
+        String subject = "Recuperação de Senha";
+        String text = "Para redefinir sua senha, clique no link abaixo:\n"
+                + "http://" + url + ":" + port + "/auth/recuperando?token=" + confirmationToken.getToken();
+
+        enviaEmail(usuario.getEmail(), subject, text);
+
+        return ResponseEntity.ok("Verifique seu email para instruções de recuperação de senha.");
+    }
+
 }
