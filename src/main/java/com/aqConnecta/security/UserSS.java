@@ -1,6 +1,7 @@
 package com.aqConnecta.security;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -9,7 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.aqConnecta.model.enums.Perfil;
+import com.aqConnecta.model.Permissao;
 
 
 public class UserSS implements UserDetails {
@@ -20,7 +21,7 @@ public class UserSS implements UserDetails {
 	private String senha;
 	private Collection<? extends GrantedAuthority> authorities;
 	
-	public UserSS(UUID uuid, String email, String senha, Set<Perfil> set) {
+	public UserSS(UUID uuid, String email, String senha, Set<Permissao> set) {
 		super();
 		this.id = uuid;
 		this.email = email;

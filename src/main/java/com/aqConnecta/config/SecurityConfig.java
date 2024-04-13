@@ -32,13 +32,17 @@ public class SecurityConfig {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    private final String[] WHITELIST = {"/auth/**"};
+
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
-    	
+
         http.sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.csrf().disable();
         http.addFilter(new JWTAuthenticationFilter(authenticationManager, jwtUtil));
         http.addFilter(new JWTAuthorizationFilter(authenticationManager, jwtUtil, userDetailsService));
+        http.authorizeHttpRequests()
+                .requestMatchers(WHITELIST).permitAll();
 
         return http.build();
     }

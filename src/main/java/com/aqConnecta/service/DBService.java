@@ -3,12 +3,11 @@ package com.aqConnecta.service;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.aqConnecta.model.Usuario;
-import com.aqConnecta.model.enums.Perfil;
+import com.aqConnecta.model.Permissao;
 import com.aqConnecta.repository.UsuarioRepository;
 
 
@@ -29,8 +28,7 @@ public class DBService {
 				.nome("riume2")
 				.senha(encoder.encode("teste123"))
 				.build();
-		
-		usuario.addPerfil(Perfil.ADMIN);
+
 		repository.save(usuario);
 	}
 }

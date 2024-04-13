@@ -2,24 +2,12 @@ package com.aqConnecta.model;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.aqConnecta.model.enums.Perfil;
-
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -40,7 +28,7 @@ public class Usuario implements Serializable {
 
 	@Id
 	@GeneratedValue(strategy=GenerationType.UUID)
-	@Column(name = "ID", length = 19)
+	@Column(name = "ID")
 	private UUID id;
 	
 	@Column(name = "EMAIL", unique = true)
@@ -51,22 +39,21 @@ public class Usuario implements Serializable {
 	
 	@Column(name = "SENHA")
 	private String senha;
-	
+
+	@ManyToMany(fetch = FetchType.EAGER)
+	@JoinTable(
+			name = "RL_USUARIO_PERMISSAO",
+			joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
+			inverseJoinColumns = @JoinColumn(name = "ID_PERMISSAO", referencedColumnName = "ID")
+	)
+	private Set<Permissao> permissao = new HashSet<>();
+
 	@Builder.Default
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "TB_USUARIO_PERFIL", joinColumns = @JoinColumn(name = "ID_USUARIO"))
-    @Column(name = "ID_PERFIL")
-    private Set<Integer> perfis = new HashSet<>();
-    
-    @Builder.Default
+	@Column(name = "DELETADO")
     private Boolean deletado = false;
 
-    public Set<Perfil> getPerfis() {
-        return perfis.stream().map(Perfil::toEnum).collect(Collectors.toSet());
-    }
+    @Builder.Default
+	@Column(name = "ATIVADO")
+    private Boolean ativado = false;
 
-    public void addPerfil(Perfil perfil) {
-        this.perfis.add(perfil.getCodigo());
-    }
-	
 }
