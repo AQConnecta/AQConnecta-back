@@ -1,4 +1,4 @@
-package com.aqConnecta.aqConnecta;
+package com.aqConnecta;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

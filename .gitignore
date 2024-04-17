@@ -139,6 +139,8 @@ replay_pid*
 .sonarqube/
 .scannerwork/
 
+target/
+
 # http://www.sonarlint.org/commandline/
 # SonarLint working directories, configuration files (including credentials)
 .sonarlint/
