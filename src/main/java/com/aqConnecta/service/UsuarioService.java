@@ -112,7 +112,7 @@ public class UsuarioService {
             throw new Exception("Usuário não foi ativado, verifique seu email:" + email);
         }
 
-        if (!usuario.getDeletado()) {
+        if (usuario.getDeletado()) {
             throw new Exception("Usuário não existe mais");
         }
         return usuario;
@@ -133,8 +133,8 @@ public class UsuarioService {
         return ResponseEntity.badRequest().body("Error: Não foi possível alterar a senha");
     }
 
-    public ResponseEntity<?> recuperarSenha(String email) throws Exception {
-        Usuario usuario = localizarPorEmail(email);
+    public ResponseEntity<?> recuperarSenha(LoginRequest email) throws Exception {
+        Usuario usuario = localizarPorEmail(email.getEmail());
 
         ConfirmaToken confirmationToken = new ConfirmaToken().builder()
                 .token(UUID.randomUUID().toString())
