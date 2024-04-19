@@ -105,9 +105,19 @@ public class UsuarioService {
     }
 
     public Usuario localizarPorEmail(String email) throws Exception {
-        return usuarioRepository.findByEmail(email)
+        Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new Exception("Usuário não encontrado para o email: " + email));
+
+        if (!usuario.getAtivado()) {
+            throw new Exception("Usuário não foi ativado, verifique seu email:" + email);
+        }
+
+        if (!usuario.getDeletado()) {
+            throw new Exception("Usuário não existe mais");
+        }
+        return usuario;
     }
+
 
     public ResponseEntity<?> recuperarSenha(LoginRequest recupera, String confirmaToken) throws Exception {
         ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
