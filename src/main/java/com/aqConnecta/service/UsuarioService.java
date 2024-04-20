@@ -47,7 +47,7 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder encoder;
 
-    public ResponseEntity<?> saveUsuario(RegistroRequest registro) throws RuntimeException {
+    public ResponseEntity<Object> saveUsuario(RegistroRequest registro) throws RuntimeException {
 
         if (usuarioRepository.existsByEmail(registro.getEmail())) {
             return ResponseHandler.generateResponse("Erro: Email já está em uso!", HttpStatus.CONFLICT, null);
@@ -83,7 +83,7 @@ public class UsuarioService {
         return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario.getUsuarioSemSenha());
     }
 
-    public ResponseEntity<?> confirmaEmail(String confirmaToken) throws Exception {
+    public ResponseEntity<Object> confirmaEmail(String confirmaToken) throws Exception {
         ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
         if (token != null) {
@@ -127,7 +127,7 @@ public class UsuarioService {
     }
 
 
-    public ResponseEntity<?> recuperarSenha(LoginRequest recupera, String confirmaToken) throws Exception {
+    public ResponseEntity<Object> recuperarSenha(LoginRequest recupera, String confirmaToken) throws Exception {
         ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
         if (token != null) {
@@ -140,7 +140,7 @@ public class UsuarioService {
         return ResponseHandler.generateResponse("Error: Não foi possivel alterar a senha", HttpStatus.BAD_REQUEST, null);
     }
 
-    public ResponseEntity<?> recuperarSenha(LoginRequest email) throws Exception {
+    public ResponseEntity<Object> recuperarSenha(LoginRequest email) throws Exception {
         Usuario usuario = localizarPorEmail(email.getEmail());
 
         ConfirmaToken confirmationToken = new ConfirmaToken().builder()

@@ -2,10 +2,7 @@ package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
-import com.aqConnecta.DTOs.response.ErrorResponse;
-import com.aqConnecta.DTOs.response.LoginResponse;
 import com.aqConnecta.DTOs.response.ResponseHandler;
-import com.aqConnecta.model.Usuario;
 import com.aqConnecta.security.JWTUtil;
 import com.aqConnecta.service.UsuarioService;
 import lombok.extern.slf4j.Slf4j;
@@ -13,8 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,23 +35,23 @@ public class UsuarioController {
         this.jwtUtil = jwtUtil;
     }
 
-    @GetMapping("/teste")
-    public ResponseEntity<?> teste() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    @GetMapping("/usuario_full")
+    public ResponseEntity<Object> teste() {
         try {
-            return ResponseHandler.generateResponse("Sei la", HttpStatus.OK, service.localizarPorEmail(authentication.getName()));
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            return ResponseHandler.generateResponse("Usuário completo", HttpStatus.OK, service.localizarPorEmail(authentication.getName()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     @PostMapping("/registrar")
-    public ResponseEntity<?> registerUser(@RequestBody RegistroRequest usuario) {
+    public ResponseEntity<Object> registerUser(@RequestBody RegistroRequest usuario) {
         return service.saveUsuario(usuario);
     }
 
     @RequestMapping(value = "/confirma-conta", method = {RequestMethod.GET, RequestMethod.POST})
-    public ResponseEntity<?> confirmUserAccount(@RequestParam("token") String confirmationToken) {
+    public ResponseEntity<Object> confirmUserAccount(@RequestParam("token") String confirmationToken) {
         try {
             return service.confirmaEmail(confirmationToken);
         } catch (Exception e) {
@@ -66,7 +61,7 @@ public class UsuarioController {
     }
 
     @RequestMapping(value = "/recuperando", method = {RequestMethod.GET, RequestMethod.POST})
-    public ResponseEntity<?> recoveryUser(@RequestParam("token") String confirmationToken, @RequestBody LoginRequest recupera) {
+    public ResponseEntity<Object> recoveryUser(@RequestParam("token") String confirmationToken, @RequestBody LoginRequest recupera) {
         try {
             return service.recuperarSenha(recupera, confirmationToken);
         } catch (Exception e) {
@@ -76,7 +71,7 @@ public class UsuarioController {
     }
 
     @PostMapping("/recuperando-senha")
-    public ResponseEntity<?> recuperandoUser(@RequestBody LoginRequest email) {
+    public ResponseEntity<Object> recuperandoUser(@RequestBody LoginRequest email) {
         try {
             return service.recuperarSenha(email);
         } catch (Exception e) {

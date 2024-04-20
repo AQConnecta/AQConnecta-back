@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.util.Objects;
 import java.util.UUID;
 
 @Getter
@@ -23,4 +24,17 @@ public class Competencia implements Serializable {
     private UUID id;
     @Column(name = "DESCRICAO")
     private String descricao;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Competencia that = (Competencia) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
 }

@@ -1,13 +1,9 @@
 package com.aqConnecta.controller;
 
-import com.aqConnecta.DTOs.request.CadastroExperienciaRequest;
-import com.aqConnecta.DTOs.request.LoginRequest;
-import com.aqConnecta.DTOs.response.ResponseHandler;
+import com.aqConnecta.DTOs.request.ExperienciaRequest;
 import com.aqConnecta.service.ExperienciaService;
-import com.aqConnecta.service.UsuarioService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +22,7 @@ public class ExperienciaController {
     }
 
     @PostMapping("/cadastrar")
-    public ResponseEntity<Object> cadastrarExperiencia(@RequestBody CadastroExperienciaRequest experienciaRequest) {
+    public ResponseEntity<Object> cadastrarExperiencia(@RequestBody ExperienciaRequest experienciaRequest) {
         return service.cadastrarExperiencia(experienciaRequest);
     }
 
@@ -35,39 +31,18 @@ public class ExperienciaController {
         return service.listarExperienciasPorUsuario(idUsuario);
     }
 
-
     @GetMapping("/localizar/{idExperiencia}")
     public ResponseEntity<Object> localizarExperiencia(@PathVariable UUID idExperiencia) {
         return service.localizarExperiencia(idExperiencia);
     }
+
     @PutMapping("/alterar/{idExperiencia}")
-    public ResponseEntity<Object> alterarExperiencia(@PathVariable UUID idExperiencia, @RequestBody CadastroExperienciaRequest experienciaRequest) {
-        return service.alterarExperiencia(experienciaRequest);
+    public ResponseEntity<Object> alterarExperiencia(@PathVariable UUID idExperiencia, @RequestBody ExperienciaRequest experienciaRequest) {
+        return service.alterarExperiencia(idExperiencia, experienciaRequest);
     }
 
     @DeleteMapping("/deletar/{idExperiencia}")
     public ResponseEntity<Object> deletarExperiencia(@PathVariable UUID idExperiencia) {
         return service.deletarExperiencia(idExperiencia);
     }
-
-//    @PostMapping("/editar")
-//    public ResponseEntity<Object> recuperandoUser(@RequestBody LoginRequest email) {
-//        try {
-//            return service.recuperarSenha(email);
-//        } catch (Exception e) {
-//            log.error(e.getMessage());
-//            return ResponseHandler.generateResponse("Erro ao recuperar o usuário", HttpStatus.BAD_REQUEST, e.getMessage());
-//        }
-//    }
-//
-//    @PostMapping("/deletar")
-//    public ResponseEntity<Object> recuperandoUser(@RequestBody LoginRequest email) {
-//        try {
-//            return service.recuperarSenha(email);
-//        } catch (Exception e) {
-//            log.error(e.getMessage());
-//            return ResponseHandler.generateResponse("Erro ao recuperar o usuário", HttpStatus.BAD_REQUEST, e.getMessage());
-//        }
-//    }
-
 }

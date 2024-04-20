@@ -1,17 +1,16 @@
 package com.aqConnecta.DTOs.request;
 
 import lombok.*;
+import org.apache.logging.log4j.util.Strings;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class CadastroExperienciaRequest {
-    private UUID id; // pode ser nulo
+public class ExperienciaRequest {
     private String titulo;
     private String instituicao;
     private String descricao;
@@ -22,6 +21,7 @@ public class CadastroExperienciaRequest {
     private boolean atualExperiencia;
 
     public boolean validarDadosObrigatorios() {
-        return !titulo.isEmpty() && !instituicao.isEmpty() && !descricao.isEmpty() && dataInicio != null;
+        return !Strings.isEmpty(titulo) && !Strings.isEmpty(instituicao) &&
+                !Strings.isEmpty(descricao) && dataInicio != null;
     }
 }
