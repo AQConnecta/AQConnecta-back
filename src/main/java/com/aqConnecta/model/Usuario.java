@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.context.annotation.Description;
 
 @Getter
 @Setter
@@ -55,5 +57,13 @@ public class Usuario implements Serializable {
     @Builder.Default
 	@Column(name = "ATIVADO")
     private Boolean ativado = false;
+
+
+	@JsonIgnore
+	@Description("So utilizar esse metodo na hora de retornar o usuario para o front, nao é necessario retornar a senha")
+	public Usuario getUsuarioSemSenha() {
+		setSenha(null);
+		return this;
+	}
 
 }

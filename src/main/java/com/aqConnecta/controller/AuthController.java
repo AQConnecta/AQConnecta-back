@@ -4,6 +4,7 @@ import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
 import com.aqConnecta.DTOs.response.ErrorResponse;
 import com.aqConnecta.DTOs.response.LoginResponse;
+import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.security.JWTUtil;
 import com.aqConnecta.service.UsuarioService;
@@ -45,7 +46,6 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
-            System.out.println(request.getEmail() + "\n" + request.getSenha());
             Authentication authentication =
                     authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getSenha()));
             Usuario usuario = service.localizarPorEmail(authentication.getName());
@@ -66,7 +66,6 @@ public class AuthController {
     @PostMapping("/registrar")
     public ResponseEntity<?> registerUser(@RequestBody RegistroRequest usuario) {
         return service.saveUsuario(usuario);
-
     }
 
     @RequestMapping(value="/confirma-conta", method= {RequestMethod.GET, RequestMethod.POST})
@@ -75,7 +74,7 @@ public class AuthController {
             return service.confirmaEmail(confirmationToken);
         } catch (Exception e) {
             log.error(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseHandler.generateResponse("Erro ao confirmar o email", HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 
@@ -85,7 +84,7 @@ public class AuthController {
             return service.recuperarSenha(recupera, confirmationToken);
         } catch (Exception e) {
             log.error(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseHandler.generateResponse("Erro ao recuperar o usuário", HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 
@@ -95,7 +94,7 @@ public class AuthController {
             return service.recuperarSenha(email);
         } catch (Exception e) {
             log.error(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseHandler.generateResponse("Erro ao recuperar o usuário", HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 

@@ -2,26 +2,22 @@ package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
+import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.ConfirmaToken;
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.repository.ConfirmaRepository;
 import com.aqConnecta.repository.PermissaoRepository;
 import com.aqConnecta.repository.UsuarioRepository;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -40,7 +36,7 @@ public class UsuarioService {
     private PermissaoRepository permissaoRepository;
 
     @Autowired
-    private JavaMailSender mailSender;
+    private EmailService emailService;
 
     @Value("${url}")
     private String url;
@@ -51,119 +47,53 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder encoder;
 
-    public ResponseEntity<?> saveUsuario(RegistroRequest registro) throws RuntimeException{
+    public ResponseEntity<?> saveUsuario(RegistroRequest registro) throws RuntimeException {
 
         if (usuarioRepository.existsByEmail(registro.getEmail())) {
-            return ResponseEntity.badRequest().body("Error: já está em uso!");
+            return ResponseHandler.generateResponse("Erro: Email já está em uso!", HttpStatus.CONFLICT, null);
         }
 
-        Set<Permissao> permissoes= new HashSet<>();
+        Set<Permissao> permissoes = new HashSet<>();
         permissoes.add(permissaoRepository.findById(1L).orElseThrow(() -> new RuntimeException("Erro interno, não foi possivel criar conta com permissão de cliente")));
 
         Usuario usuario = new Usuario().builder()
-                    .id(UUID.randomUUID())
-                    .nome(registro.getNome())
-                    .email(registro.getEmail())
-                    .senha(encoder.encode(registro.getSenha()))
-                    .permissao(permissoes )
-                    .build();
+                .id(UUID.randomUUID())
+                .nome(registro.getNome())
+                .email(registro.getEmail())
+                .senha(encoder.encode(registro.getSenha()))
+                .permissao(permissoes)
+                .build();
 
         usuarioRepository.save(usuario);
 
         ConfirmaToken confirmationToken = new ConfirmaToken().builder()
-                                            .token(UUID.randomUUID().toString())
-                                            .usuario(usuario)
-                                            .dataCriacao(new Timestamp(System.currentTimeMillis()))
-                                            .build();
+                .token(UUID.randomUUID().toString())
+                .usuario(usuario)
+                .dataCriacao(new Timestamp(System.currentTimeMillis()))
+                .build();
 
         confirmaRepository.save(confirmationToken);
 
         String subject = "Complete a inscrição!";
         String text = "Para confirmar a conta, por favor clique aqui :";
-        String link = "http://" + url + ":" + port + "/auth/confirma-conta?token="+confirmationToken.getToken();
-        enviaEmail(usuario.getEmail(), subject, criaCorpo(usuario.getNome(), text, link));
+        String link = "http://" + url + ":" + port + "/auth/confirma-conta?token=" + confirmationToken.getToken();
+        String corpoEmail = emailService.criarCorpoEmail(usuario.getNome(), text, link);
+        emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
 
-        return ResponseEntity.ok("Verifique seu email");
-    }
-
-    private String criaCorpo(String nome, String mensagem, String link) {
-        return "<html>\n" +
-                "<body>\n" +
-                "    <table role=\"presentation\" border=\"0\" width=\"100%\">\n" +
-                "        <tr>\n" +
-                "            <td style=\"background-color: #19538d; width: 100%; height: 65px; text-align: center !important;\">\n" +
-                "            </td>\n" +
-                "        </tr>\n" +
-                "    </table>\n" +
-                "    <div style=\"width: 650px; height: 500px; overflow: hidden; margin-left: 25%;\">\n" +
-                "        <table role=\"presentation\" border=\"0\" width=\"70%\"\n" +
-                "            style=\"border-collapse: collapse; border: 0; overflow: hidden;\">\n" +
-                "            <tr>\n" +
-                "                <td colspan=\"2\" style=\"padding: 10px; text-align: left; width: 70%; border: 0; padding-top: 15px;\">\n" +
-                "                    Olá <b>" + nome + "</b>,\n" +
-                "                </td>\n" +
-                "            </tr>\n" +
-                "            <tr>\n" +
-                "                <td colspan=\"2\" style=\"padding: 10px; text-align: left; width: 70%; border: 0;\">\n" +
-                "                    " + mensagem + "\n" +
-                "                </td>\n" +
-                "            </tr>\n" +
-                "            <tr>\n" +
-                "                <td colspan=\"2\" style=\"padding: 10px; text-align: left; width: 70%; border: 0;\">\n" +
-                "                    <a href=\"" + link + "\" target=\"_blank\" style=\"margin-left: 25%\">\n" +
-                "                        <button\n" +
-                "                            style=\"padding: 12px 25px 10px 25px; border: 0px; border-radius: 50px; color: #258BE3; font-size: 20px; margin: 10px 0px; font-weight: 600; letter-spacing: 2px; text-decoration: none; display: inline-block; cursor: pointer;\">\n" +
-                "                            " + "Clique Aqui" +
-                "                        </button>\n" +
-                "                    </a>\n" +
-                "                </td>\n" +
-                "            </tr>\n" +
-                "            <tr>\n" +
-                "                <td colspan=\"2\" style=\"padding: 10px; text-align: left; width: 70%; border: 0;\">\n" +
-                "                    Atenciosamente,\n" +
-                "                </td>\n" +
-                "            </tr>\n" +
-                "            <tr>\n" +
-                "                <td colspan=\"2\" style=\"padding: 10px; text-align: left; width: 70%; border: 0; padding-bottom: 10px;\">\n" +
-                "                    AQConnecta.\n" +
-                "                </td>\n" +
-                "            </tr>\n" +
-                "            </td>\n" +
-                "        </table>\n" +
-                "    </div>\n" +
-                "</body>\n" +
-                "</html>";
-
-    }
-
-    private void enviaEmail(String email, String subject, String text) {
-        MimeMessage message = mailSender.createMimeMessage();
-        try {
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setTo(email);
-            helper.setSubject(subject);
-            helper.setText(text, true);
-
-            mailSender.send(message);
-        }catch (MessagingException e) {
-
-        }
-
+        return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario.getUsuarioSemSenha());
     }
 
     public ResponseEntity<?> confirmaEmail(String confirmaToken) throws Exception {
         ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
-        if(token != null)
-        {
+        if (token != null) {
             Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
             usuario.setAtivado(true);
             usuarioRepository.save(usuario);
             confirmaRepository.delete(token);
-            return ResponseEntity.ok("Email verificado com sucesso!");
+            return ResponseHandler.generateResponse("Email verificado com sucesso!", HttpStatus.OK, usuario.getUsuarioSemSenha());
         }
-        return ResponseEntity.badRequest().body("Error: Não foi possível verificar o email");
+        return ResponseHandler.generateResponse("Error: Não foi possivel verificar o email", HttpStatus.BAD_REQUEST, null);
     }
 
     public Usuario localizarPorEmail(String email) throws Exception {
@@ -177,6 +107,7 @@ public class UsuarioService {
         if (usuario.getDeletado()) {
             throw new Exception("Usuário não existe mais");
         }
+
         return usuario;
     }
 
@@ -184,15 +115,14 @@ public class UsuarioService {
     public ResponseEntity<?> recuperarSenha(LoginRequest recupera, String confirmaToken) throws Exception {
         ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
-        if(token != null)
-        {
+        if (token != null) {
             Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
             usuario.setSenha(encoder.encode(recupera.getSenha()));
             usuarioRepository.save(usuario);
             confirmaRepository.delete(token);
-            return ResponseEntity.ok("Senha alterada com sucesso!");
+            return ResponseHandler.generateResponse("Senha alterara com sucesso!.", HttpStatus.OK, null);
         }
-        return ResponseEntity.badRequest().body("Error: Não foi possível alterar a senha");
+        return ResponseHandler.generateResponse("Error: Não foi possivel alterar a senha", HttpStatus.BAD_REQUEST, null);
     }
 
     public ResponseEntity<?> recuperarSenha(LoginRequest email) throws Exception {
@@ -209,9 +139,9 @@ public class UsuarioService {
         String subject = "Recuperação de Senha";
         String text = "Para redefinir sua senha, clique no link abaixo:\n";
         String link = "http://" + url + ":" + port + "/auth/recuperando?token=" + confirmationToken.getToken();
-        enviaEmail(usuario.getEmail(), subject, criaCorpo(usuario.getNome(), text, link));
-
-        return ResponseEntity.ok("Verifique seu email para instruções de recuperação de senha.");
+        String corpoEmail = emailService.criarCorpoEmail(usuario.getNome(), text, link);
+        emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
+        return ResponseHandler.generateResponse("Verifique seu email para instruções de recuperação de senha.", HttpStatus.OK, null);
     }
 
 }
