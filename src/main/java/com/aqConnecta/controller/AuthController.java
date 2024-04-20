@@ -7,6 +7,7 @@ import com.aqConnecta.DTOs.response.LoginResponse;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.security.JWTUtil;
 import com.aqConnecta.service.UsuarioService;
+import jakarta.mail.MessagingException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -44,6 +45,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
+            System.out.println(request.getEmail() + "\n" + request.getSenha());
             Authentication authentication =
                     authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getSenha()));
             Usuario usuario = service.localizarPorEmail(authentication.getName());
@@ -64,6 +66,7 @@ public class AuthController {
     @PostMapping("/registrar")
     public ResponseEntity<?> registerUser(@RequestBody RegistroRequest usuario) {
         return service.saveUsuario(usuario);
+
     }
 
     @RequestMapping(value="/confirma-conta", method= {RequestMethod.GET, RequestMethod.POST})
@@ -87,7 +90,7 @@ public class AuthController {
     }
 
     @PostMapping("/recuperando-senha")
-    public ResponseEntity<?> recuperandoUser(@RequestBody String email) {
+    public ResponseEntity<?> recuperandoUser(@RequestBody LoginRequest email) {
         try {
             return service.recuperarSenha(email);
         } catch (Exception e) {
