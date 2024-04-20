@@ -56,7 +56,7 @@ public class ExperienciaService {
             experienciaRepository.save(experiencia);
             return ResponseHandler.generateResponse("Experiencia cadastrada com súcesso!", HttpStatus.CREATED, experiencia);
         } catch (Exception e) {
-            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
