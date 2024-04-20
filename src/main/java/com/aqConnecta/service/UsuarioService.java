@@ -91,7 +91,7 @@ public class UsuarioService {
             usuario.setAtivado(true);
             usuarioRepository.save(usuario);
             confirmaRepository.delete(token);
-            return ResponseHandler.generateResponse("Email verificado com sucesso!", HttpStatus.OK, usuario.getUsuarioSemSenha());
+            return ResponseHandler.generateResponse("Email verificado com sucesso!", HttpStatus.OK, null);
         }
         return ResponseHandler.generateResponse("Error: Não foi possivel verificar o email", HttpStatus.BAD_REQUEST, null);
     }
@@ -102,6 +102,21 @@ public class UsuarioService {
 
         if (!usuario.getAtivado()) {
             throw new Exception("Usuário não foi ativado, verifique seu email:" + email);
+        }
+
+        if (usuario.getDeletado()) {
+            throw new Exception("Usuário não existe mais");
+        }
+
+        return usuario;
+    }
+
+    public Usuario localizar(UUID uuid) throws Exception {
+        Usuario usuario = usuarioRepository.findById(uuid)
+                .orElseThrow(() -> new Exception("Usuário não encontrado para o id: " + uuid.toString()));
+
+        if (!usuario.getAtivado()) {
+            throw new Exception("Usuário não foi ativado, verifique seu email:" + uuid.toString());
         }
 
         if (usuario.getDeletado()) {

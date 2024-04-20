@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,6 +51,22 @@ public class Usuario implements Serializable {
 	)
 	private Set<Permissao> permissao = new HashSet<>();
 
+	@ManyToMany(fetch = FetchType.EAGER)
+	@JoinTable(
+			name = "RL_USUARIO_COMPETENCIA",
+			joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
+			inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
+	)
+	private Set<Competencia> competencias = new HashSet<>();
+
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
+	@JsonManagedReference // evitar recursao infinita
+	private Set<Endereco> enderecos = new HashSet<>();
+
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
+	@JsonManagedReference // evitar recursao infinita
+	private Set<Experiencia> experiencias = new HashSet<>();
+
 	@Builder.Default
 	@Column(name = "DELETADO")
     private Boolean deletado = false;
@@ -57,7 +74,6 @@ public class Usuario implements Serializable {
     @Builder.Default
 	@Column(name = "ATIVADO")
     private Boolean ativado = false;
-
 
 	@JsonIgnore
 	@Description("So utilizar esse metodo na hora de retornar o usuario para o front, nao é necessario retornar a senha")
