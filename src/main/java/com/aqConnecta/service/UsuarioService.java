@@ -1,6 +1,8 @@
 package com.aqConnecta.service;
 
+import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
+import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.ConfirmaToken;
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
@@ -10,13 +12,12 @@ import com.aqConnecta.repository.UsuarioRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -46,60 +47,116 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder encoder;
 
-    public ResponseEntity<?> saveUsuario(RegistroRequest registro) throws RuntimeException{
+    public ResponseEntity<Object> saveUsuario(RegistroRequest registro) throws RuntimeException {
 
         if (usuarioRepository.existsByEmail(registro.getEmail())) {
-            return ResponseEntity.badRequest().body("Error: já está em uso!");
+            return ResponseHandler.generateResponse("Erro: Email já está em uso!", HttpStatus.CONFLICT, null);
         }
 
-        Set<Permissao> permissoes= new HashSet<>();
+        Set<Permissao> permissoes = new HashSet<>();
         permissoes.add(permissaoRepository.findById(1L).orElseThrow(() -> new RuntimeException("Erro interno, não foi possivel criar conta com permissão de cliente")));
 
         Usuario usuario = new Usuario().builder()
-                    .id(UUID.randomUUID())
-                    .nome(registro.getNome())
-                    .email(registro.getEmail())
-                    .senha(encoder.encode(registro.getSenha()))
-                    .permissao(permissoes )
-                    .build();
+                .id(UUID.randomUUID())
+                .nome(registro.getNome())
+                .email(registro.getEmail())
+                .senha(encoder.encode(registro.getSenha()))
+                .permissao(permissoes)
+                .build();
 
         usuarioRepository.save(usuario);
 
         ConfirmaToken confirmationToken = new ConfirmaToken().builder()
-                                            .token(UUID.randomUUID().toString())
-                                            .usuario(usuario)
-                                            .dataCriacao(new Timestamp(System.currentTimeMillis()))
-                                            .build();
+                .token(UUID.randomUUID().toString())
+                .usuario(usuario)
+                .dataCriacao(new Timestamp(System.currentTimeMillis()))
+                .build();
 
         confirmaRepository.save(confirmationToken);
 
-        SimpleMailMessage mailMessage = new SimpleMailMessage();
-        mailMessage.setTo(usuario.getEmail());
-        mailMessage.setSubject("Complete a inscrição!");
-        mailMessage.setText("para confirmar a conta, por favor clique aqui : "
-                +"http://" + url + ":" + port + "/auth/confirma-conta?token="+confirmationToken.getToken());
-        emailService.sendEmail(mailMessage);
+        String subject = "Complete a inscrição!";
+        String text = "Para confirmar a conta, por favor clique aqui :";
+        String link = "http://" + url + ":" + port + "/auth/confirma-conta?token=" + confirmationToken.getToken();
+        String corpoEmail = emailService.criarCorpoEmail(usuario.getNome(), text, link);
+        emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
 
-        System.out.println("Confirmation Token: " + confirmationToken.getToken());
-
-        return ResponseEntity.ok("Verify email by the link sent on your email address");
+        return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario.getUsuarioSemSenha());
     }
 
-    public ResponseEntity<?> confirmaEmail(String confirmaToken) throws Exception {
+    public ResponseEntity<Object> confirmaEmail(String confirmaToken) throws Exception {
         ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
-        if(token != null)
-        {
+        if (token != null) {
             Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
             usuario.setAtivado(true);
             usuarioRepository.save(usuario);
-            return ResponseEntity.ok("Email varificado com sucesso!");
+            confirmaRepository.delete(token);
+            return ResponseHandler.generateResponse("Email verificado com sucesso!", HttpStatus.OK, null);
         }
-        return ResponseEntity.badRequest().body("Error: Não foi possível verificar o email");
+        return ResponseHandler.generateResponse("Error: Não foi possivel verificar o email", HttpStatus.BAD_REQUEST, null);
     }
 
     public Usuario localizarPorEmail(String email) throws Exception {
-        return usuarioRepository.findByEmail(email)
+        Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new Exception("Usuário não encontrado para o email: " + email));
+
+        if (!usuario.getAtivado()) {
+            throw new Exception("Usuário não foi ativado, verifique seu email:" + email);
+        }
+
+        if (usuario.getDeletado()) {
+            throw new Exception("Usuário não existe mais");
+        }
+
+        return usuario;
     }
+
+    public Usuario localizar(UUID uuid) throws Exception {
+        Usuario usuario = usuarioRepository.findById(uuid)
+                .orElseThrow(() -> new Exception("Usuário não encontrado para o id: " + uuid.toString()));
+
+        if (!usuario.getAtivado()) {
+            throw new Exception("Usuário não foi ativado, verifique seu email:" + uuid.toString());
+        }
+
+        if (usuario.getDeletado()) {
+            throw new Exception("Usuário não existe mais");
+        }
+
+        return usuario;
+    }
+
+
+    public ResponseEntity<Object> recuperarSenha(LoginRequest recupera, String confirmaToken) throws Exception {
+        ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
+
+        if (token != null) {
+            Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
+            usuario.setSenha(encoder.encode(recupera.getSenha()));
+            usuarioRepository.save(usuario);
+            confirmaRepository.delete(token);
+            return ResponseHandler.generateResponse("Senha alterara com sucesso!.", HttpStatus.OK, null);
+        }
+        return ResponseHandler.generateResponse("Error: Não foi possivel alterar a senha", HttpStatus.BAD_REQUEST, null);
+    }
+
+    public ResponseEntity<Object> recuperarSenha(LoginRequest email) throws Exception {
+        Usuario usuario = localizarPorEmail(email.getEmail());
+
+        ConfirmaToken confirmationToken = new ConfirmaToken().builder()
+                .token(UUID.randomUUID().toString())
+                .usuario(usuario)
+                .dataCriacao(new Timestamp(System.currentTimeMillis()))
+                .build();
+
+        confirmaRepository.save(confirmationToken);
+
+        String subject = "Recuperação de Senha";
+        String text = "Para redefinir sua senha, clique no link abaixo:\n";
+        String link = "http://" + url + ":" + port + "/auth/recuperando?token=" + confirmationToken.getToken();
+        String corpoEmail = emailService.criarCorpoEmail(usuario.getNome(), text, link);
+        emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
+        return ResponseHandler.generateResponse("Verifique seu email para instruções de recuperação de senha.", HttpStatus.OK, null);
+    }
+
 }
