@@ -29,7 +29,7 @@ public class EnderecoService {
     public ResponseEntity<Object> cadastrarEndereco(EnderecoRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         if (!registro.validarDadosObrigatorios()) {
@@ -59,7 +59,7 @@ public class EnderecoService {
     public ResponseEntity<Object> listarEnderecosPorUsuario(UUID idUsuario) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
@@ -77,7 +77,7 @@ public class EnderecoService {
     public ResponseEntity<Object> localizarEndereco(UUID idEndereco) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
@@ -152,6 +152,10 @@ public class EnderecoService {
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao tentar excluir o endereço.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
+    }
+
+    private boolean isUserAnonymous(Authentication authentication) {
+        return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
     }
 
 }

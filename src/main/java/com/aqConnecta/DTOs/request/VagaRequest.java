@@ -1,9 +1,10 @@
 package com.aqConnecta.DTOs.request;
 
+import com.aqConnecta.model.Usuario;
 import lombok.*;
-import org.apache.logging.log4j.util.Strings;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -11,17 +12,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 public class VagaRequest {
+    private UUID id;
+    private Usuario publicador;
     private String titulo;
-    private String instituicao;
     private String descricao;
-    // yyyy-MM-dd'T'HH:mm:ss
-    private LocalDateTime dataInicio;
-    // pode ser nulo
-    private LocalDateTime dataFim;
-    private boolean atualExperiencia;
-
-    public boolean validarDadosObrigatorios() {
-        return !Strings.isEmpty(titulo) && !Strings.isEmpty(instituicao) &&
-                !Strings.isEmpty(descricao) && dataInicio != null;
-    }
+    private String localDaVaga;
+    private boolean aceitaRemoto;
+    private LocalDateTime dataLimiteCandidatura;
+    private LocalDateTime criadoEm;
+    private LocalDateTime atualizadoEm;
+    private LocalDateTime deletadoEm;
 }

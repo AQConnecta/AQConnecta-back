@@ -33,8 +33,8 @@ public class ExperienciaService {
     public ResponseEntity<Object> cadastrarExperiencia(ExperienciaRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        if (isUserAnonymous(authentication)) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         if (!registro.validarDadosObrigatorios()) {
             return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
@@ -63,9 +63,9 @@ public class ExperienciaService {
     public ResponseEntity<Object> listarExperienciasPorUsuario(UUID idUsuario) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
+        if (isUserAnonymous(authentication)) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+            }
         try {
             Usuario usuario = usuarioService.localizar(idUsuario);
             Set<Experiencia> experiencias = experienciaRepository.findByUsuario(usuario);
@@ -81,9 +81,9 @@ public class ExperienciaService {
     public ResponseEntity<Object> localizarExperiencia(UUID idExperiencia) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
+        if (isUserAnonymous(authentication)) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+            }
         try {
             Optional<Experiencia> experiencia = experienciaRepository.findById(idExperiencia);
             if (experiencia.isPresent()) {
@@ -158,6 +158,10 @@ public class ExperienciaService {
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao tentar excluir a experiencia.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
+    }
+
+    private boolean isUserAnonymous(Authentication authentication) {
+        return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
     }
 
 }

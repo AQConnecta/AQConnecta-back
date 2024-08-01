@@ -32,7 +32,7 @@ public class CompetenciaService {
     public ResponseEntity<Object> relacionarCompetenciasUsuario(CompetenciaUsuarioRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         if (registro.validarDadosObrigatorios()) {
@@ -57,7 +57,7 @@ public class CompetenciaService {
     public ResponseEntity<Object> removerRelacaoCompetenciasUsuario(CompetenciaUsuarioRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         if (registro.validarDadosObrigatorios()) {
@@ -81,7 +81,7 @@ public class CompetenciaService {
     public ResponseEntity<Object> listarCompetenciasPorUsuario(UUID idUsuario) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
@@ -106,6 +106,10 @@ public class CompetenciaService {
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
+    }
+
+    private boolean isUserAnonymous(Authentication authentication) {
+        return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
     }
 
 

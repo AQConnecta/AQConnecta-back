@@ -1,7 +1,7 @@
 package com.aqConnecta.controller;
 
-import com.aqConnecta.DTOs.request.ExperienciaRequest;
-import com.aqConnecta.service.ExperienciaService;
+import com.aqConnecta.DTOs.request.VagaRequest;
+import com.aqConnecta.service.VagaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -10,39 +10,39 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/experiencia")
+@RequestMapping("/vaga")
 @Slf4j
 public class VagaController {
 
-    private final ExperienciaService service;
+    private final VagaService service;
 
     @Autowired
-    public VagaController(ExperienciaService service) {
+    public VagaController(VagaService service) {
         this.service = service;
     }
 
     @PostMapping("/cadastrar")
-    public ResponseEntity<Object> cadastrarExperiencia(@RequestBody ExperienciaRequest experienciaRequest) {
-        return service.cadastrarExperiencia(experienciaRequest);
+    public ResponseEntity<Object> cadastrarVaga(@RequestBody VagaRequest vagaRequest) {
+        return service.cadastrarVaga(vagaRequest);
     }
 
     @GetMapping("/listar/{idUsuario}")
-    public ResponseEntity<Object> listarExperienciasPorUsuario(@PathVariable UUID idUsuario) {
-        return service.listarExperienciasPorUsuario(idUsuario);
+    public ResponseEntity<Object> listarVagasPorUsuario(@PathVariable UUID idUsuario) {
+        return service.listarVagasPorUsuario(idUsuario);
     }
 
-    @GetMapping("/localizar/{idExperiencia}")
-    public ResponseEntity<Object> localizarExperiencia(@PathVariable UUID idExperiencia) {
-        return service.localizarExperiencia(idExperiencia);
+    @GetMapping("/localizar/{idVaga}")
+    public ResponseEntity<Object> localizarVaga(@PathVariable UUID idVaga) {
+        return service.localizarVaga(idVaga);
     }
 
-    @PutMapping("/alterar/{idExperiencia}")
-    public ResponseEntity<Object> alterarExperiencia(@PathVariable UUID idExperiencia, @RequestBody ExperienciaRequest experienciaRequest) {
-        return service.alterarExperiencia(idExperiencia, experienciaRequest);
+    @PutMapping("/alterar/{idVaga}")
+    public ResponseEntity<Object> alterarVaga(@PathVariable UUID idVaga, @RequestBody VagaRequest vagaRequest) {
+        return service.alterarVaga(idVaga, vagaRequest);
     }
 
-    @DeleteMapping("/deletar/{idExperiencia}")
-    public ResponseEntity<Object> deletarExperiencia(@PathVariable UUID idExperiencia) {
-        return service.deletarExperiencia(idExperiencia);
+    @DeleteMapping("/deletar/{idVaga}")
+    public ResponseEntity<Object> deletarVaga(@PathVariable UUID idVaga) {
+        return service.deletarVaga(idVaga);
     }
 }

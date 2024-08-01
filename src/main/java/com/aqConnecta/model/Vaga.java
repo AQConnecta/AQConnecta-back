@@ -1,14 +1,11 @@
 package com.aqConnecta.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.context.annotation.Description;
 
 import java.io.Serializable;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -16,63 +13,43 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "TB_USUARIO")
+@Table(name = "TB_VAGA")
 @Entity
 @ToString
 public class Vaga implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	@Id
-	@GeneratedValue(strategy=GenerationType.UUID)
-	@Column(name = "ID")
-	private UUID id;
-	
-	@Column(name = "EMAIL", unique = true)
-	private String email;
-	
-	@Column(name = "NOME")
-	private String nome;
-	
-	@Column(name = "SENHA")
-	private String senha;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "ID")
+    private UUID id;
 
-	@ManyToMany(fetch = FetchType.EAGER)
-	@JoinTable(
-			name = "RL_USUARIO_PERMISSAO",
-			joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
-			inverseJoinColumns = @JoinColumn(name = "ID_PERMISSAO", referencedColumnName = "ID")
-	)
-	private Set<Permissao> permissao = new HashSet<>();
+    @ManyToOne
+    @JoinColumn(name = "ID_USUARIO")
+    @JsonBackReference // evitar recursao infinita
+    private Usuario publicador;
 
-	@ManyToMany(fetch = FetchType.EAGER)
-	@JoinTable(
-			name = "RL_USUARIO_COMPETENCIA",
-			joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
-			inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
-	)
-	private Set<Competencia> competencias = new HashSet<>();
+    @Column(name = "TITULO")
+    private String titulo;
 
-	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-	@JsonManagedReference // evitar recursao infinita
-	private Set<Endereco> enderecos = new HashSet<>();
+    @Column(name = "DESCRICAO")
+    private String descricao;
 
-	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-	@JsonManagedReference // evitar recursao infinita
-	private Set<Experiencia> experiencias = new HashSet<>();
+    @Column(name = "LOCAL_VAGA")
+    private String localDaVaga;
+    @Column(name = "ACEITA_REMOTO")
+    private boolean aceitaRemoto;
+    @Column(name = "DATA_LIMITE")
+    private LocalDateTime dataLimiteCandidatura;
+    @Column(name = "CRIADO_EM")
+    private LocalDateTime criadoEm;
+    @Column(name = "ATUALIZADO_EM")
+    private LocalDateTime atualizadoEm;
+    @Column(name = "DELETADO_EM")
+    private LocalDateTime deletadoEm;
 
-	@Builder.Default
-	@Column(name = "DELETADO")
-    private Boolean deletado = false;
+    // TODO: Lista de competencias
+    // TODO: Lista de usuarios que se candidataram
 
-    @Builder.Default
-	@Column(name = "ATIVADO")
-    private Boolean ativado = false;
-
-	@JsonIgnore
-	@Description("So utilizar esse metodo na hora de retornar o usuario para o front, nao é necessario retornar a senha")
-	public Vaga getUsuarioSemSenha() {
-		setSenha(null);
-		return this;
-	}
 
 }

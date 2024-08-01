@@ -1,11 +1,10 @@
 package com.aqConnecta.service;
 
-import com.aqConnecta.DTOs.request.ExperienciaRequest;
+import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
-import com.aqConnecta.model.Experiencia;
+import com.aqConnecta.model.Vaga;
 import com.aqConnecta.model.Usuario;
-import com.aqConnecta.repository.ExperienciaRepository;
-import com.aqConnecta.repository.UsuarioRepository;
+import com.aqConnecta.repository.VagaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -26,66 +26,83 @@ public class VagaService {
     private UsuarioService usuarioService;
 
     @Autowired
-    private ExperienciaRepository experienciaRepository;
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private VagaRepository vagaRepository;
 
-    public ResponseEntity<Object> cadastrarExperiencia(ExperienciaRequest registro) {
+    public ResponseEntity<Object> cadastrarVaga(VagaRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
-        if (!registro.validarDadosObrigatorios()) {
-            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
-        }
+//        if (!registro.validarDadosObrigatorios()) {
+//            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
+//        }
         try {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-            Experiencia experiencia = new Experiencia().builder()
+            Vaga vaga = new Vaga().builder()
                     .id(UUID.randomUUID())
-                    .usuario(usuario)
+                    .publicador(usuario)
                     .titulo(registro.getTitulo())
-                    .instituicao(registro.getInstituicao())
                     .descricao(registro.getDescricao())
-                    .dataInicio(registro.getDataInicio())
+                    .localDaVaga(registro.getLocalDaVaga())
+                    .aceitaRemoto(registro.isAceitaRemoto())
+                    .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
+                    .criadoEm(registro.getCriadoEm())
+                    .atualizadoEm(registro.getAtualizadoEm())
+                    .deletadoEm(registro.getDeletadoEm())
                     .build();
-            if (registro.getDataFim() != null) {
-                experiencia.setDataFim(registro.getDataFim());
-            }
-            experiencia.setAtualExperiencia(registro.isAtualExperiencia());
-            experienciaRepository.save(experiencia);
-            return ResponseHandler.generateResponse("Experiencia cadastrada com súcesso!", HttpStatus.CREATED, experiencia);
+            vagaRepository.save(vaga);
+            return ResponseHandler.generateResponse("Vaga cadastrada com súcesso!", HttpStatus.CREATED, vaga);
         } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    public ResponseEntity<Object> listarExperienciasPorUsuario(UUID idUsuario) {
+    // Listar todas as vagas do sistema
+    // TODO: Implementar a bosta dos filtros
+    public ResponseEntity<Object> listarVagas(UUID idUsuario) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            List<Vaga> experiencias = vagaRepository.findAll();
+            if (!experiencias.isEmpty()) {
+                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, experiencias);
+            }
+            return ResponseHandler.generateResponse("Nenhum vaga encontrada.", HttpStatus.NO_CONTENT);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as vagas.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public ResponseEntity<Object> listarVagasPorUsuario(UUID idUsuario) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
             Usuario usuario = usuarioService.localizar(idUsuario);
-            Set<Experiencia> experiencias = experienciaRepository.findByUsuario(usuario);
+            Set<Vaga> experiencias = vagaRepository.findByPublicador(usuario);
             if (!experiencias.isEmpty()) {
                 return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, experiencias);
             }
-            return ResponseHandler.generateResponse("Nenhum experiencia encontrada para este usuário.", HttpStatus.NO_CONTENT);
+            return ResponseHandler.generateResponse("Nenhum vaga encontrada para este usuário.", HttpStatus.NO_CONTENT);
         } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as experiencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as vagas do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-    public ResponseEntity<Object> localizarExperiencia(UUID idExperiencia) {
+    public ResponseEntity<Object> localizarVaga(UUID idVaga) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+        if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
-            Optional<Experiencia> experiencia = experienciaRepository.findById(idExperiencia);
+            Optional<Vaga> experiencia = vagaRepository.findById(idVaga);
             if (experiencia.isPresent()) {
                 return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, experiencia);
             }
@@ -96,68 +113,74 @@ public class VagaService {
     }
 
 
-    public ResponseEntity<Object> alterarExperiencia(UUID idExperiencia, ExperienciaRequest registro) {
+    public ResponseEntity<Object> alterarVaga(UUID idVaga, VagaRequest registro) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            if (isUserAnonymous(authentication)) {
                 return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
             }
-            if (!registro.validarDadosObrigatorios() && idExperiencia != null && !idExperiencia.toString().isEmpty()) {
-                return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
-            }
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-            Optional<Experiencia> experiencia = experienciaRepository.findById(idExperiencia);
-            if (experiencia.isPresent()) {
-                if (!experiencia.get().getUsuario().getId().equals(usuario.getId())) {
+            Optional<Vaga> vaga = vagaRepository.findById(idVaga);
+            if (vaga.isPresent()) {
+                if (!vaga.get().getPublicador().getId().equals(usuario.getId())) {
                     return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.UNAUTHORIZED);
                 }
-                Experiencia experienciaAlterada = new Experiencia().builder()
-                        .id(idExperiencia)
-                        .usuario(experiencia.get().getUsuario())
+                Vaga vagaAlterada = new Vaga().builder()
+                        .id(idVaga)
+                        .publicador(usuario)
                         .titulo(registro.getTitulo())
-                        .instituicao(registro.getInstituicao())
                         .descricao(registro.getDescricao())
-                        .dataInicio(registro.getDataInicio())
+                        .localDaVaga(registro.getLocalDaVaga())
+                        .aceitaRemoto(registro.isAceitaRemoto())
+                        .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
+                        .criadoEm(registro.getCriadoEm())
+                        .atualizadoEm(registro.getAtualizadoEm())
+                        .deletadoEm(registro.getDeletadoEm())
                         .build();
-                if (registro.getDataFim() != null) {
-                    experienciaAlterada.setDataFim(registro.getDataFim());
-                }
-                // TODO verificar porque da dando ruim se nao passar ele indo pra false de qualuqer jeito tmj
-                if (experiencia.get().isAtualExperiencia() != registro.isAtualExperiencia()) {
-                    experienciaAlterada.setAtualExperiencia(registro.isAtualExperiencia());
-                }
-                experienciaRepository.save(experienciaAlterada);
-                return ResponseHandler.generateResponse("Experiencia atualizada com súcesso!", HttpStatus.CREATED, experiencia);
+                vagaRepository.save(vagaAlterada);
+                return ResponseHandler.generateResponse("Vaga atualizada com súcesso!", HttpStatus.CREATED, vaga);
             }
-            return ResponseHandler.generateResponse("Erro ao encontrar a experiencia!", HttpStatus.NOT_FOUND);
+            return ResponseHandler.generateResponse("Erro ao encontrar a vaga!", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
         }
     }
 
 
-    public ResponseEntity<Object> deletarExperiencia(UUID idExperiencia) {
+    public ResponseEntity<Object> deletarVaga(UUID idVaga) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
             // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            if (isUserAnonymous(authentication)) {
                 return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
             }
+
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-            Optional<Experiencia> experiencia = experienciaRepository.findById(idExperiencia);
-            if (experiencia.isPresent()) {
-                if (!experiencia.get().getUsuario().getId().equals(usuario.getId())) {
-                    return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
-                }
-                experienciaRepository.deleteById(idExperiencia);
-            } else {
-                return ResponseHandler.generateResponse("Não é possível excluir uma experiencia não existente.", HttpStatus.NOT_FOUND);
+
+            if (usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Precisa ser usuário administrador para continuar.", HttpStatus.UNAUTHORIZED);
             }
-            return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
+
+            Optional<Vaga> vaga = vagaRepository.findById(idVaga);
+
+            if (vaga.isPresent()) {
+                if (!vaga.get().getPublicador().getId().equals(usuario.getId())) {
+                    return ResponseHandler.generateResponse("Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
+                }
+                vagaRepository.deleteById(idVaga);
+                return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
+            } else {
+                return ResponseHandler.generateResponse("Não é possível excluir uma vaga não existente.", HttpStatus.NOT_FOUND);
+            }
         } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar excluir a experiencia.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return ResponseHandler.generateResponse("Houve um erro ao tentar excluir a vaga.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
+    }
+
+    private boolean isUserAnonymous(Authentication authentication) {
+        return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
     }
 
 }
