@@ -26,6 +26,11 @@ public class VagaController {
         return service.cadastrarVaga(vagaRequest);
     }
 
+    @GetMapping("/listar")
+    public ResponseEntity<Object> listarVagas() {
+        return service.listarVagas();
+    }
+
     @GetMapping("/listar/{idUsuario}")
     public ResponseEntity<Object> listarVagasPorUsuario(@PathVariable UUID idUsuario) {
         return service.listarVagasPorUsuario(idUsuario);

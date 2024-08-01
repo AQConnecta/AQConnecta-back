@@ -59,8 +59,8 @@ public class VagaService {
     }
 
     // Listar todas as vagas do sistema
-    // TODO: Implementar a bosta dos filtros
-    public ResponseEntity<Object> listarVagas(UUID idUsuario) {
+    // TODO: Implementar os filtros
+    public ResponseEntity<Object> listarVagas() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
         if (isUserAnonymous(authentication)) {
@@ -112,6 +112,17 @@ public class VagaService {
         }
     }
 
+    public Vaga localizar(UUID uuid) throws Exception {
+        Vaga vaga = vagaRepository.findById(uuid)
+                .orElseThrow(() -> new Exception("Vaga não encontrado para o id: " + uuid.toString()));
+
+        if (vaga.getDeletadoEm() != null) {
+            throw new Exception("Vaga não existe mais");
+        }
+
+        return vaga;
+    }
+
 
     public ResponseEntity<Object> alterarVaga(UUID idVaga, VagaRequest registro) {
         try {
@@ -159,14 +170,10 @@ public class VagaService {
 
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
 
-            if (usuario.verificarUsuarioNaoEAdministrador()) {
-                return ResponseHandler.generateResponse("Precisa ser usuário administrador para continuar.", HttpStatus.UNAUTHORIZED);
-            }
-
             Optional<Vaga> vaga = vagaRepository.findById(idVaga);
 
             if (vaga.isPresent()) {
-                if (!vaga.get().getPublicador().getId().equals(usuario.getId())) {
+                if (!vaga.get().getPublicador().getId().equals(usuario.getId()) && usuario.verificarUsuarioNaoEAdministrador()) {
                     return ResponseHandler.generateResponse("Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
                 }
                 vagaRepository.deleteById(idVaga);

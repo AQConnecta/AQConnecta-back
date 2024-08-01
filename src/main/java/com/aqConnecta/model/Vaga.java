@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -47,6 +49,14 @@ public class Vaga implements Serializable {
     private LocalDateTime atualizadoEm;
     @Column(name = "DELETADO_EM")
     private LocalDateTime deletadoEm;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "RL_VAGA_COMPETENCIA",
+            joinColumns = @JoinColumn(name = "ID_VAGA", referencedColumnName = "ID"),
+            inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
+    )
+    private Set<Competencia> competencias = new HashSet<>();
 
     // TODO: Lista de competencias
     // TODO: Lista de usuarios que se candidataram
