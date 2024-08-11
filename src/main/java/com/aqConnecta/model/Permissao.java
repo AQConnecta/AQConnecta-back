@@ -17,6 +17,9 @@ import java.io.Serializable;
 @Entity
 @ToString
 public class Permissao implements Serializable {
+    public static final String ROLE_CLIENTE = "CLIENTE";
+    public static final String ROLE_ADMIN = "ADMIN";
+
     private static final long serialVersionUID = 1L;
 
     @Id
