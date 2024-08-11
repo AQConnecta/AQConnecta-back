@@ -57,6 +57,10 @@ public class CompetenciaController {
         return service.removerRelacaoCompetenciasVaga(competenciaVagaRequest);
     }
 
+    @GetMapping("/competencias_quentes")
+    public ResponseEntity<Object> listarCompetenciasQuentes() {
+        return service.listarCompetenciasQuentes();
+    }
 
     // TODO fazer na proxima release
 //    @GetMapping("/localizar/{idEndereco}")

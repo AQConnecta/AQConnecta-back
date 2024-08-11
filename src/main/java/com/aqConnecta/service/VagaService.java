@@ -49,7 +49,6 @@ public class VagaService {
                     .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
                     .criadoEm(registro.getCriadoEm())
                     .atualizadoEm(registro.getAtualizadoEm())
-                    .deletadoEm(registro.getDeletadoEm())
                     .build();
             vagaRepository.save(vaga);
             return ResponseHandler.generateResponse("Vaga cadastrada com súcesso!", HttpStatus.CREATED, vaga);
@@ -147,7 +146,6 @@ public class VagaService {
                         .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
                         .criadoEm(registro.getCriadoEm())
                         .atualizadoEm(registro.getAtualizadoEm())
-                        .deletadoEm(registro.getDeletadoEm())
                         .build();
                 vagaRepository.save(vagaAlterada);
                 return ResponseHandler.generateResponse("Vaga atualizada com súcesso!", HttpStatus.CREATED, vaga);
