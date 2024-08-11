@@ -2,6 +2,7 @@ package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.CompetenciaUsuarioRequest;
 import com.aqConnecta.DTOs.request.CompetenciaVagaRequest;
+import com.aqConnecta.DTOs.response.CompetenciaCountDTO;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.Competencia;
 import com.aqConnecta.model.Usuario;
@@ -18,7 +19,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.nio.ByteBuffer;
 import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -192,6 +195,60 @@ public class CompetenciaService {
             return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, competenciaRepository.findAll());
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    private UUID byteArrayToUUID(byte[] byteArray) {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(byteArray);
+        long mostSigBits = byteBuffer.getLong();
+        long leastSigBits = byteBuffer.getLong();
+        return new UUID(mostSigBits, leastSigBits);
+    }
+
+    public ResponseEntity<Object> listarCompetenciasQuentes() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            // TODO remover essa bosta de contains dps do riume arrumar o security
+            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+            }
+            List<Object[]> results = competenciaRepository.countCompetenciasInVagas();
+            List<CompetenciaCountDTO> competenciaCountDTOS =
+                    results.stream()
+                            .map(result -> new CompetenciaCountDTO(
+                                    new Competencia(byteArrayToUUID((byte[]) result[0]), result[1].toString()),
+                                    ((Number) result[2]).longValue()
+                            ))
+                            .toList();
+
+            assignLevels(competenciaCountDTOS);
+
+            return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, competenciaCountDTOS);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public void assignLevels(List<CompetenciaCountDTO> competenciaCountDTOS) {
+        long total = vagaRepository.count();
+
+        competenciaCountDTOS.forEach(dto -> {
+            double percentage = (dto.getCount() * 100.0) / total;
+            dto.setLevel(calculateLevel(percentage));
+        });
+    }
+
+    private Long calculateLevel(double percentage) {
+        if (percentage < 25) {
+            return 0L;
+        } else if (percentage < 50) {
+            return 1L;
+        } else if (percentage < 75) {
+            return 2L;
+        } else if (percentage < 90) {
+            return 3L;
+        } else {
+            return 4L;
         }
     }
 
