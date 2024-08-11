@@ -1,6 +1,7 @@
 package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.ExperienciaRequest;
+import com.aqConnecta.DTOs.request.UsuarioRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.Experiencia;
 import com.aqConnecta.model.Usuario;
@@ -55,6 +56,22 @@ public class ExperienciaService {
             experiencia.setAtualExperiencia(registro.isAtualExperiencia());
             experienciaRepository.save(experiencia);
             return ResponseHandler.generateResponse("Experiencia cadastrada com súcesso!", HttpStatus.CREATED, experiencia);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<Object> cadastrarDescricaoUsuario(UsuarioRequest usuarioRequest) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (isUserAnonymous(authentication)) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+            usuario.setDescricao(usuarioRequest.getDescricao());
+            usuarioRepository.save(usuario);
+            return ResponseHandler.generateResponse("Descrição cadastrada com súcesso!", HttpStatus.CREATED, usuario);
         } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }

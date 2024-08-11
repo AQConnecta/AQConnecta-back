@@ -1,6 +1,7 @@
 package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.ExperienciaRequest;
+import com.aqConnecta.DTOs.request.UsuarioRequest;
 import com.aqConnecta.service.ExperienciaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,11 @@ public class ExperienciaController {
     @PostMapping("/cadastrar")
     public ResponseEntity<Object> cadastrarExperiencia(@RequestBody ExperienciaRequest experienciaRequest) {
         return service.cadastrarExperiencia(experienciaRequest);
+    }
+
+    @PostMapping("/cadastrar_desc_usuario")
+    public ResponseEntity<Object> cadastrarDescricaoUsuario(@RequestBody UsuarioRequest usuarioRequest) {
+        return service.cadastrarDescricaoUsuario(usuarioRequest);
     }
 
     @GetMapping("/listar/{idUsuario}")
