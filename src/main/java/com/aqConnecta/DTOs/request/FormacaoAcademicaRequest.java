@@ -15,7 +15,6 @@ import java.util.UUID;
 public class FormacaoAcademicaRequest {
 
     private UUID id;
-    private Usuario publicador;
     private Universidade universidade;
     private String descricao;
     private String diploma;

@@ -2,10 +2,8 @@ package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.FormacaoAcademicaRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
-import com.aqConnecta.model.Experiencia;
 import com.aqConnecta.model.FormacaoAcademica;
 import com.aqConnecta.model.Usuario;
-import com.aqConnecta.repository.ExperienciaRepository;
 import com.aqConnecta.repository.FormacaoAcademicaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +24,6 @@ public class FormacaoAcademicaService {
     @Autowired
     private UsuarioService usuarioService;
 
-    @Autowired
-    private ExperienciaRepository experienciaRepository;
     @Autowired
     private FormacaoAcademicaRepository formacaoAcademicaRepository;
 
@@ -67,9 +63,9 @@ public class FormacaoAcademicaService {
         }
         try {
             Usuario usuario = usuarioService.localizar(idUsuario);
-            Set<FormacaoAcademica> experiencias = formacaoAcademicaRepository.findByUsuario(usuario);
-            if (!experiencias.isEmpty()) {
-                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, experiencias);
+            Set<FormacaoAcademica> formacoesAcademicas = formacaoAcademicaRepository.findByUsuario(usuario);
+            if (!formacoesAcademicas.isEmpty()) {
+                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, formacoesAcademicas);
             }
             return ResponseHandler.generateResponse("Nenhum formação academica encontrada para este usuário.", HttpStatus.NO_CONTENT);
         } catch (Exception e) {
@@ -84,9 +80,9 @@ public class FormacaoAcademicaService {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
-            Optional<Experiencia> experiencia = experienciaRepository.findById(idFormacaoAcademia);
-            if (experiencia.isPresent()) {
-                return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, experiencia);
+            Optional<FormacaoAcademica> formacaoAcademica = formacaoAcademicaRepository.findById(idFormacaoAcademia);
+            if (formacaoAcademica.isPresent()) {
+                return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, formacaoAcademica);
             }
             return ResponseHandler.generateResponse("Nenhum formação academica encontrada para este ID.", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
@@ -144,9 +140,9 @@ public class FormacaoAcademicaService {
                 return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
             }
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-            Optional<FormacaoAcademica> experiencia = formacaoAcademicaRepository.findById(idFormacaoAcademica);
-            if (experiencia.isPresent()) {
-                if (!experiencia.get().getUsuario().getId().equals(usuario.getId())) {
+            Optional<FormacaoAcademica> formacaoAcademica = formacaoAcademicaRepository.findById(idFormacaoAcademica);
+            if (formacaoAcademica.isPresent()) {
+                if (!formacaoAcademica.get().getUsuario().getId().equals(usuario.getId())) {
                     return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
                 }
                 formacaoAcademicaRepository.deleteById(idFormacaoAcademica);

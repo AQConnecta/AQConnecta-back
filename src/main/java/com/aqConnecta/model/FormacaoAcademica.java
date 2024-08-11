@@ -1,6 +1,7 @@
 package com.aqConnecta.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,7 +31,7 @@ public class FormacaoAcademica implements Serializable {
     private Usuario usuario;
     @OneToOne
     @JoinColumn(name = "ID_UNIVERSIDADE")
-    @JsonBackReference // evitar recursao infinita
+    @JsonManagedReference // evitar recursao infinita
     private Universidade universidade;
     @Column(name = "DESCRICAO")
     private String descricao;
