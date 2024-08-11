@@ -21,5 +21,4 @@ public class VagaRequest {
     private LocalDateTime dataLimiteCandidatura;
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
-    private LocalDateTime deletadoEm;
 }
