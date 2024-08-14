@@ -85,6 +85,9 @@ public class Usuario implements Serializable {
 //	@JsonManagedReference // evitar recursão infinita
 	private Map<Integer, String> curriculo = new HashMap<>();
 
+//	@OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+//	private Set<Candidatura> candidaturas = new HashSet<>();
+
 	@JsonIgnore
 	@Description("So utilizar esse metodo na hora de retornar o usuario para o front, nao é necessario retornar a senha")
 	public Usuario getUsuarioSemSenha() {
