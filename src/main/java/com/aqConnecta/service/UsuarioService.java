@@ -3,21 +3,24 @@ package com.aqConnecta.service;
 import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
-import com.aqConnecta.model.ConfirmaToken;
-import com.aqConnecta.model.Permissao;
-import com.aqConnecta.model.Usuario;
+import com.aqConnecta.model.*;
 import com.aqConnecta.repository.ConfirmaRepository;
 import com.aqConnecta.repository.PermissaoRepository;
 import com.aqConnecta.repository.UsuarioRepository;
+import com.aqConnecta.security.UserSS;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -37,6 +40,9 @@ public class UsuarioService {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private DocumentoService documentoService;
 
     @Value("${url}")
     private String url;
@@ -158,5 +164,97 @@ public class UsuarioService {
         emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
         return ResponseHandler.generateResponse("Verifique seu email para instruções de recuperação de senha.", HttpStatus.OK, null);
     }
+
+    public ResponseEntity<Object> salvarImagemPerfil(MultipartFile file) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous") ) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            String username = (String) authentication.getPrincipal();
+            Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
+            usuario.setFotoPerfil(documentoService.upload(file));
+            usuarioRepository.save(usuario);
+
+            return ResponseHandler.generateResponse("Foto adicionada com sucesso", HttpStatus.OK, documentoService.upload(file));
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao mandar a imagem.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public ResponseEntity<Object> removerImagemPerfil() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous") ) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            String username = (String) authentication.getPrincipal();
+            Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
+            usuario.setFotoPerfil(null);
+            usuarioRepository.save(usuario);
+
+            return ResponseHandler.generateResponse("Foto removida com sucesso", HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao remover a imagem.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public ResponseEntity<Object> anexarCurriculo(MultipartFile file) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Verifica se o usuário está autenticado e não é anônimo
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            String username = (String) authentication.getPrincipal();
+            Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
+
+            if (usuario.getCurriculo() == null) {
+                usuario.setCurriculo(new HashMap<>());
+            }
+
+            int proximaSequencia = usuario.getCurriculo().keySet().stream()
+                    .max(Integer::compareTo)
+                    .orElse(0) + 1;
+
+            usuario.getCurriculo().put(proximaSequencia, documentoService.upload(file));
+            usuarioRepository.save(usuario);
+
+            return ResponseHandler.generateResponse("Currículo adicionado com sucesso", HttpStatus.OK, documentoService.upload(file));
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao enviar o currículo.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+    public ResponseEntity<Object> removerCurriculo(Integer id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Verifica se o usuário está autenticado e não é anônimo
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            String username = (String) authentication.getPrincipal();
+            Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
+
+            usuario.getCurriculo().remove(id);
+            usuarioRepository.save(usuario);
+
+            return ResponseHandler.generateResponse("Currículo removido com sucesso", HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao remover o currículo.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
 
 }

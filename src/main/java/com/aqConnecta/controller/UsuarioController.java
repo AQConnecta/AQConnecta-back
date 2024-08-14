@@ -14,6 +14,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.UUID;
 
 import java.util.UUID;
 
@@ -22,6 +25,7 @@ import java.util.UUID;
 @Slf4j
 public class UsuarioController {
 
+    @Autowired
     private final UsuarioService service;
     private final AuthenticationManager authenticationManager;
     private final JWTUtil jwtUtil;
@@ -80,6 +84,31 @@ public class UsuarioController {
             log.error(e.getMessage());
             return ResponseHandler.generateResponse("Erro ao recuperar o usuário", HttpStatus.BAD_REQUEST, e.getMessage());
         }
+    }
+
+    @PostMapping("/upload-imagem-perfil")
+    public ResponseEntity<Object> uploadImagemPerfil(@RequestParam("file") MultipartFile file) {
+        return service.salvarImagemPerfil(file);
+    }
+
+    @PutMapping("/alterar-imagem-perfil")
+    public ResponseEntity<Object> alterarImagemPerfil(@RequestParam("file") MultipartFile file) {
+        return service.salvarImagemPerfil(file);
+    }
+
+    @DeleteMapping("/remover-imagem-perfil")
+    public ResponseEntity<Object> removerImagemPerfil() {
+        return service.removerImagemPerfil();
+    }
+
+    @PostMapping("/anexar-curriculo")
+    public ResponseEntity<Object> anexarCurriculo(@RequestParam("file") MultipartFile file) {
+        return service.anexarCurriculo(file);
+    }
+
+    @DeleteMapping("/remover-curriculo/{idCurriculo}")
+    public ResponseEntity<Object> removerCurriculo(@PathVariable Integer idCurriculo) {
+        return service.removerCurriculo(idCurriculo);
     }
 
 }
