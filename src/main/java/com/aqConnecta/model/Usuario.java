@@ -57,14 +57,15 @@ public class Usuario implements Serializable {
 			joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
 			inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
 	)
+//	@JsonManagedReference
 	private Set<Competencia> competencias = new HashSet<>();
 
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-	@JsonManagedReference // evitar recursao infinita
+//	@JsonManagedReference // evitar recursao infinita
 	private Set<Endereco> enderecos = new HashSet<>();
 
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-	@JsonManagedReference // evitar recursao infinita
+//	@JsonManagedReference // evitar recursao infinita
 	private Set<Experiencia> experiencias = new HashSet<>();
 
 	@Builder.Default
@@ -81,7 +82,7 @@ public class Usuario implements Serializable {
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(name = "RL_USUARIO_CURRICULO", joinColumns = @JoinColumn(name = "USUARIO_ID"))
 	@MapKeyColumn(name = "ID")
-	@JsonManagedReference // evitar recursão infinita
+//	@JsonManagedReference // evitar recursão infinita
 	private Map<Integer, String> curriculo = new HashMap<>();
 
 	@JsonIgnore
