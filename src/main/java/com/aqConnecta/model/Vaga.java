@@ -28,7 +28,7 @@ public class Vaga implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "ID_USUARIO")
-    @JsonBackReference // evitar recursao infinita
+//    @JsonBackReference // evitar recursao infinita
     private Usuario publicador;
 
     @Column(name = "TITULO")
