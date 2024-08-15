@@ -58,6 +58,9 @@ public class Vaga implements Serializable {
     )
     private Set<Competencia> competencias = new HashSet<>();
 
+    @OneToMany(mappedBy = "vaga", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @JsonBackReference
+    private Set<Candidatura> candidaturas = new HashSet<>();
     // TODO: Lista de competencias
     // TODO: Lista de usuarios que se candidataram
 

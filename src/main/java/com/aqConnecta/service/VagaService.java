@@ -2,8 +2,10 @@ package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
+import com.aqConnecta.model.Candidatura;
 import com.aqConnecta.model.Vaga;
 import com.aqConnecta.model.Usuario;
+import com.aqConnecta.repository.CandidaturaRepository;
 import com.aqConnecta.repository.VagaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,11 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -27,6 +27,9 @@ public class VagaService {
 
     @Autowired
     private VagaRepository vagaRepository;
+
+    @Autowired
+    private CandidaturaRepository candidaturaRepository;
 
     public ResponseEntity<Object> cadastrarVaga(VagaRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -186,6 +189,60 @@ public class VagaService {
 
     private boolean isUserAnonymous(Authentication authentication) {
         return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
+    }
+
+    public ResponseEntity<Object> candidatar(UUID vagaId, Integer curriculoId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Verifica se o usuário está autenticado e não é anônimo
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            String username = (String) authentication.getPrincipal();
+            Usuario usuario = usuarioService.localizarPorEmail(username);
+            Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
+            vaga.setCandidaturas(new HashSet<>());
+            vaga.getCandidaturas().add(new Candidatura().builder()
+                                                        .usuario(usuario)
+                                                        .vaga(vaga)
+                                                        .curriculo(curriculoId)
+                                                        .curriculoUrl(usuario.getCurriculo().get(curriculoId))
+                                                        .build());
+
+            vaga = vagaRepository.save(vaga);
+
+            return ResponseHandler.generateResponse("Candidatura enviada com sucesso", HttpStatus.OK, vaga);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao enviar a candidatura.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public ResponseEntity<Object> listarCandidaturas(UUID vagaId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Verifica se o usuário está autenticado e não é anônimo
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            String username = (String) authentication.getPrincipal();
+            Usuario usuario = usuarioService.localizarPorEmail(username);
+            Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
+//            if(usuario.getId() == vaga.getPublicador().getId() && usuario.verificarUsuarioNaoEAdministrador()) {
+//                return ResponseHandler.generateResponse("Usuario não tem permissão para realizar essa tarefa.", HttpStatus.UNAUTHORIZED);
+//            }
+
+            List<Candidatura> candidaturas = candidaturaRepository.findAllCandidaturaByVagaId(vagaId);
+
+            return ResponseHandler.generateResponse("Candidatura enviada com sucesso", HttpStatus.OK, candidaturas);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao enviar a candidatura.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
     }
 
 }

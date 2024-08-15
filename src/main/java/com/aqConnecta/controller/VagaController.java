@@ -50,4 +50,14 @@ public class VagaController {
     public ResponseEntity<Object> deletarVaga(@PathVariable UUID idVaga) {
         return service.deletarVaga(idVaga);
     }
+
+    @PostMapping("/candidatar/{idVaga}")
+    public ResponseEntity<Object> candidatar(@PathVariable UUID idVaga, @RequestBody Integer curriculoId) {
+        return service.candidatar(idVaga, curriculoId);
+    }
+
+    @GetMapping("/candidaturas/{idVaga}")
+    public ResponseEntity<Object> ListarCandidaturas(@PathVariable UUID idVaga) {
+        return service.listarCandidaturas(idVaga);
+    }
 }
