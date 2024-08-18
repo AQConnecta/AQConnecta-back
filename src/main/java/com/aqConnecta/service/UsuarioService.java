@@ -4,9 +4,7 @@ import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.*;
-import com.aqConnecta.repository.ConfirmaRepository;
-import com.aqConnecta.repository.PermissaoRepository;
-import com.aqConnecta.repository.UsuarioRepository;
+import com.aqConnecta.repository.*;
 import com.aqConnecta.security.UserSS;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -52,6 +48,10 @@ public class UsuarioService {
 
     @Autowired
     private PasswordEncoder encoder;
+    @Autowired
+    private VagaRepository vagaRepository;
+    @Autowired
+    private CandidaturaRepository candidaturaRepository;
 
     public ResponseEntity<Object> saveUsuario(RegistroRequest registro) throws RuntimeException {
 
@@ -256,5 +256,44 @@ public class UsuarioService {
         }
     }
 
+    public ResponseEntity<Object> listarCurriculo() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        // Verifica se o usuário está autenticado e não é anônimo
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            String username = (String) authentication.getPrincipal();
+            Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
+
+            return ResponseHandler.generateResponse("Todos os curriculos do usuario", HttpStatus.OK, usuario.getCurriculo());
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao remover o currículo.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public ResponseEntity<Object> listarCandidaturas() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Verifica se o usuário está autenticado e não é anônimo
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            String username = (String) authentication.getPrincipal();
+            Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
+            List<Vaga> vagas = vagaRepository.findAllById(candidaturaRepository.findAllCandidaturaByUsuarioId(usuario.getId())
+                                                                            .stream()
+                                                                            .map(candidatura -> candidatura.getVaga().getId())
+                                                                            .collect(Collectors.toList()));
+            return ResponseHandler.generateResponse("Todos as vagas candidatadas do usuario", HttpStatus.OK, vagas);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao listar as candidaturas.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
 }

@@ -111,4 +111,13 @@ public class UsuarioController {
         return service.removerCurriculo(idCurriculo);
     }
 
+    @GetMapping("/curriculos")
+    public ResponseEntity<Object> listarCurriculos() {
+        return service.listarCurriculo();
+    }
+
+    @GetMapping("/candidaturas")
+    public ResponseEntity<Object> listarCandidaturas() {
+        return service.listarCandidaturas();
+    }
 }
