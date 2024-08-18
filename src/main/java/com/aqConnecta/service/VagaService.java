@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -65,20 +66,29 @@ public class VagaService {
     // TODO: Implementar os filtros
     public ResponseEntity<Object> listarVagas() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
         // TODO remover essa bosta de contains dps do riume arrumar o security
         if (isUserAnonymous(authentication)) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
+
         try {
-            List<Vaga> experiencias = vagaRepository.findAll();
+            LocalDateTime now = LocalDateTime.now();
+
+            List<Vaga> experiencias = vagaRepository.findAll().stream()
+                    .filter(vaga -> vaga.getDeletadoEm() == null)
+                    .filter(vaga -> vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now))
+                    .collect(Collectors.toList());
+
             if (!experiencias.isEmpty()) {
                 return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, experiencias);
             }
-            return ResponseHandler.generateResponse("Nenhum vaga encontrada.", HttpStatus.NO_CONTENT);
+            return ResponseHandler.generateResponse("Nenhuma vaga encontrada.", HttpStatus.NO_CONTENT);
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao tentar listar as vagas.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
+
 
     public ResponseEntity<Object> listarVagasPorUsuario(UUID idUsuario) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
