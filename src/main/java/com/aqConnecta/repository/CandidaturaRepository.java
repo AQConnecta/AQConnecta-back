@@ -12,4 +12,5 @@ import java.util.UUID;
 @Repository
 public interface CandidaturaRepository extends JpaRepository<Candidatura, Integer>{
     List<Candidatura> findAllCandidaturaByVagaId(UUID vagaId);
+    List<Candidatura> findAllCandidaturaByUsuarioId(UUID usuarioId);
 }

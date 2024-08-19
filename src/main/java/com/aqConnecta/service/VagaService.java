@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -233,16 +234,24 @@ public class VagaService {
             String username = (String) authentication.getPrincipal();
             Usuario usuario = usuarioService.localizarPorEmail(username);
             Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
-//            if(usuario.getId() == vaga.getPublicador().getId() && usuario.verificarUsuarioNaoEAdministrador()) {
-//                return ResponseHandler.generateResponse("Usuario não tem permissão para realizar essa tarefa.", HttpStatus.UNAUTHORIZED);
-//            }
 
-            List<Candidatura> candidaturas = candidaturaRepository.findAllCandidaturaByVagaId(vagaId);
+            // Verifica se o usuário é o publicador da vaga ou tem permissão de administrador
+            if (!usuario.getId().equals(vaga.getPublicador().getId()) && !usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Usuario não tem permissão para realizar essa tarefa.", HttpStatus.UNAUTHORIZED);
+            }
 
-            return ResponseHandler.generateResponse("Candidatura enviada com sucesso", HttpStatus.OK, candidaturas);
+            // Obtém todas as candidaturas para a vaga e mapeia para os usuários
+            List<Usuario> usuarios = candidaturaRepository.findAllCandidaturaByVagaId(vagaId)
+                    .stream()
+                    .map(Candidatura::getUsuario)
+                    .distinct()  // Evita duplicados, caso haja candidaturas duplicadas
+                    .collect(Collectors.toList());
+
+            return ResponseHandler.generateResponse("Usuários que se candidataram listados com sucesso", HttpStatus.OK, candidaturaRepository.findAllCandidaturaByVagaId(vagaId));
         } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao enviar a candidatura.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return ResponseHandler.generateResponse("Houve um erro ao listar os usuários que se candidataram.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
+
 
 }
