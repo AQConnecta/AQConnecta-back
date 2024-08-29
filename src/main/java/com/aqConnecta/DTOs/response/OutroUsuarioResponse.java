@@ -18,6 +18,7 @@ public class OutroUsuarioResponse {
     private String descricao;
     private Set<Competencia> competencias = new HashSet<>();
     private Set<Experiencia> experiencias = new HashSet<>();
+    private Set<FormacaoAcademica> formacoesAcademica = new HashSet<>();
     private Boolean deletado = false;
     private Boolean ativado = false;
     private String fotoPerfil;
@@ -29,6 +30,7 @@ public class OutroUsuarioResponse {
         this.descricao = usuarioIn.getDescricao();
         this.competencias = usuarioIn.getCompetencias();
         this.experiencias = usuarioIn.getExperiencias();
+        this.formacoesAcademica = usuarioIn.getFormacoesAcademicas();
         this.deletado = usuarioIn.getDeletado();
         this.ativado = usuarioIn.getAtivado();
         this.fotoPerfil = usuarioIn.getFotoPerfil();

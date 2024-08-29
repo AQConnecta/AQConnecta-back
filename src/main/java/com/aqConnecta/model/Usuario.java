@@ -43,6 +43,9 @@ public class Usuario implements Serializable {
 	@Column(name = "SENHA")
 	private String senha;
 
+	@Column(name = "USER_URL")
+	private String userUrl;
+
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(
 			name = "RL_USUARIO_PERMISSAO",
@@ -67,6 +70,10 @@ public class Usuario implements Serializable {
 	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
 //	@JsonManagedReference // evitar recursao infinita
 	private Set<Experiencia> experiencias = new HashSet<>();
+
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
+//	@JsonManagedReference // evitar recursao infinita
+	private Set<FormacaoAcademica> formacoesAcademicas = new HashSet<>();
 
 	@Builder.Default
 	@Column(name = "DELETADO")

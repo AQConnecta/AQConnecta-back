@@ -2,6 +2,7 @@ package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
+import com.aqConnecta.DTOs.response.OutroUsuarioResponse;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.*;
 import com.aqConnecta.repository.*;
@@ -18,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
+import java.text.Normalizer;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -68,6 +71,7 @@ public class UsuarioService {
                 .email(registro.getEmail())
                 .senha(encoder.encode(registro.getSenha()))
                 .permissao(permissoes)
+                .userUrl(generateUserUrl(registro.getNome()))
                 .build();
 
         usuarioRepository.save(usuario);
@@ -89,6 +93,23 @@ public class UsuarioService {
         return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario.getUsuarioSemSenha());
     }
 
+    private String generateUserUrl(String nome) {
+        if (nome == null) {
+            return null;
+        }
+        Random random = new Random();
+
+        String normalized = Normalizer.normalize(nome, Normalizer.Form.NFD);
+        normalized = Pattern.compile("\\p{M}").matcher(normalized).replaceAll("");
+
+        normalized = normalized.toLowerCase().replace(" ", "-");
+        if (usuarioRepository.existsByUserUrl(normalized)) {
+            normalized = normalized.concat(String.format("-%d", Math.abs(random.nextLong())));
+        }
+
+        return normalized;
+    }
+
     public ResponseEntity<Object> confirmaEmail(String confirmaToken) throws Exception {
         ConfirmaToken token = confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
@@ -100,6 +121,23 @@ public class UsuarioService {
             return ResponseHandler.generateResponse("Email verificado com sucesso!", HttpStatus.OK, null);
         }
         return ResponseHandler.generateResponse("Error: Não foi possivel verificar o email", HttpStatus.BAD_REQUEST, null);
+    }
+
+    public ResponseEntity<Object> localizarPorUrl(String userUrl) {
+        Optional<Usuario> usuario = usuarioRepository.findByUserUrl(userUrl);
+
+        if (usuario.isEmpty()) {
+            return ResponseHandler.generateResponse(String.format("Usuário não encontrado para url %s", userUrl), HttpStatus.NOT_FOUND, null);
+        }
+
+        if (usuario.get().getDeletado()) {
+            return ResponseHandler.generateResponse("Usuário não existe mais!", HttpStatus.NOT_FOUND, null);
+        }
+
+        OutroUsuarioResponse outroUsuarioResponse = new OutroUsuarioResponse();
+        outroUsuarioResponse.inToOut(usuario.get());
+
+        return ResponseHandler.generateResponse("Usuário encontrado!", HttpStatus.OK, outroUsuarioResponse);
     }
 
     public Usuario localizarPorEmail(String email) throws Exception {
