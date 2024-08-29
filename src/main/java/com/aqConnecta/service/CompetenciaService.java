@@ -13,6 +13,9 @@ import com.aqConnecta.repository.VagaRepository;
 import io.jsonwebtoken.lang.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -185,14 +188,23 @@ public class CompetenciaService {
         }
     }
 
-    public ResponseEntity<Object> listarCompetencias() {
+    public ResponseEntity<Object> listarCompetencias(String search, int page, int size) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             // TODO remover essa bosta de contains dps do riume arrumar o security
             if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
                 return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
             }
-            return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, competenciaRepository.findAll());
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Competencia> competenciaPage;
+
+            if (search.isEmpty()) {
+                competenciaPage = competenciaRepository.findAll(pageable);
+            } else {
+                competenciaPage = competenciaRepository.findByDescricaoContainingIgnoreCase(search, pageable);
+            }
+
+            return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, competenciaPage.getContent());
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }

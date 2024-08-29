@@ -23,8 +23,10 @@ public class CompetenciaController {
     }
 
     @GetMapping("/listar")
-    public ResponseEntity<Object> listarCompetencias() {
-        return service.listarCompetencias();
+    public ResponseEntity<Object> listarCompetencias(@RequestParam(value = "search", required = false, defaultValue = "") String search,
+                                                     @RequestParam(value = "page", required = false, defaultValue = "0") int page,
+                                                     @RequestParam(value = "size", required = false, defaultValue = "100") int size) {
+        return service.listarCompetencias(search, page, size);
     }
 
     @PostMapping("/relacionar_competencia_usuario")
