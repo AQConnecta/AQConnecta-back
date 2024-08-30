@@ -51,6 +51,11 @@ public class UsuarioController {
         }
     }
 
+    @GetMapping("/localizar_por_url/{userUrl}")
+    public ResponseEntity<Object> localizarPorUrl(@PathVariable String userUrl) {
+        return service.localizarPorUrl(userUrl);
+    }
+
     @PostMapping("/registrar")
     public ResponseEntity<Object> registerUser(@RequestBody RegistroRequest usuario) {
         return service.saveUsuario(usuario);
