@@ -49,6 +49,8 @@ public class Vaga implements Serializable {
     private LocalDateTime atualizadoEm;
     @Column(name = "DELETADO_EM")
     private LocalDateTime deletadoEm;
+    @Column(name = "IS_INICIANTE")
+    private boolean isIniciante;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

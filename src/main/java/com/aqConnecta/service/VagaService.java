@@ -2,6 +2,7 @@ package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
+import com.aqConnecta.DTOs.response.VagaResponse;
 import com.aqConnecta.model.Candidatura;
 import com.aqConnecta.model.Vaga;
 import com.aqConnecta.model.Usuario;
@@ -54,12 +55,23 @@ public class VagaService {
                     .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
                     .criadoEm(registro.getCriadoEm())
                     .atualizadoEm(registro.getAtualizadoEm())
+                    .isIniciante(registro.isIniciante())
                     .build();
             vagaRepository.save(vaga);
             return ResponseHandler.generateResponse("Vaga cadastrada com súcesso!", HttpStatus.CREATED, vaga);
         } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public List<VagaResponse> fillVagaResponse(List<Vaga> vagas) {
+        List<VagaResponse> vagasResponse = new ArrayList<>();
+        for (Vaga vaga : vagas) {
+            VagaResponse vagaResponse = new VagaResponse();
+            vagaResponse.inToOut(vaga);
+            vagasResponse.add(vagaResponse);
+        }
+        return vagasResponse;
     }
 
     // Listar todas as vagas do sistema
@@ -75,13 +87,14 @@ public class VagaService {
         try {
             LocalDateTime now = LocalDateTime.now();
 
-            List<Vaga> experiencias = vagaRepository.findAll().stream()
+            List<Vaga> vagas = vagaRepository.findAll().stream()
                     .filter(vaga -> vaga.getDeletadoEm() == null)
                     .filter(vaga -> vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now))
                     .collect(Collectors.toList());
 
-            if (!experiencias.isEmpty()) {
-                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, experiencias);
+            List<VagaResponse> vagasResponse = fillVagaResponse(vagas);
+            if (!vagasResponse.isEmpty()) {
+                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, vagasResponse);
             }
             return ResponseHandler.generateResponse("Nenhuma vaga encontrada.", HttpStatus.NO_CONTENT);
         } catch (Exception e) {
@@ -98,9 +111,11 @@ public class VagaService {
         }
         try {
             Usuario usuario = usuarioService.localizar(idUsuario);
-            Set<Vaga> experiencias = vagaRepository.findByPublicador(usuario);
-            if (!experiencias.isEmpty()) {
-                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, experiencias);
+            Set<Vaga> vagas = vagaRepository.findByPublicador(usuario);
+
+            List<VagaResponse> vagasResponse = fillVagaResponse(vagas.stream().toList());
+            if (!vagasResponse.isEmpty()) {
+                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, vagasResponse);
             }
             return ResponseHandler.generateResponse("Nenhum vaga encontrada para este usuário.", HttpStatus.NO_CONTENT);
         } catch (Exception e) {
@@ -115,9 +130,9 @@ public class VagaService {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
-            Optional<Vaga> experiencia = vagaRepository.findById(idVaga);
-            if (experiencia.isPresent()) {
-                return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, experiencia);
+            Optional<Vaga> vaga = vagaRepository.findById(idVaga);
+            if (vaga.isPresent()) {
+                return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, vaga);
             }
             return ResponseHandler.generateResponse("Nenhum experiencia encontrada para este ID.", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
@@ -160,6 +175,7 @@ public class VagaService {
                         .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
                         .criadoEm(registro.getCriadoEm())
                         .atualizadoEm(registro.getAtualizadoEm())
+                        .isIniciante(registro.isIniciante())
                         .build();
                 vagaRepository.save(vagaAlterada);
                 return ResponseHandler.generateResponse("Vaga atualizada com súcesso!", HttpStatus.CREATED, vaga);
