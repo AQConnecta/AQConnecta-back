@@ -31,7 +31,7 @@ public class FormacaoAcademica implements Serializable {
     private Usuario usuario;
     @OneToOne
     @JoinColumn(name = "ID_UNIVERSIDADE")
-    @JsonManagedReference // evitar recursao infinita
+//    @JsonManagedReference // evitar recursao infinita
     private Universidade universidade;
     @Column(name = "DESCRICAO")
     private String descricao;

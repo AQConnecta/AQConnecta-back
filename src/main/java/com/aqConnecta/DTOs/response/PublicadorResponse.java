@@ -23,6 +23,7 @@ public class PublicadorResponse {
     private Boolean deletado = false;
     private Boolean ativado = false;
     private String fotoPerfil;
+    private String userUrl;
 
     public void inToOut(Usuario publicadorIn) {
         this.id = publicadorIn.getId();
@@ -32,5 +33,6 @@ public class PublicadorResponse {
         this.deletado = publicadorIn.getDeletado();
         this.ativado = publicadorIn.getAtivado();
         this.fotoPerfil = publicadorIn.getFotoPerfil();
+        this.userUrl = publicadorIn.getUserUrl();
     }
 }

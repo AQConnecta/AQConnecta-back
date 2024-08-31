@@ -1,9 +1,12 @@
 package com.aqConnecta.DTOs.response;
 
+import com.aqConnecta.model.Competencia;
 import com.aqConnecta.model.Vaga;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -19,6 +22,7 @@ public class VagaResponse {
     private String localDaVaga;
     private boolean aceitaRemoto;
     private LocalDateTime dataLimiteCandidatura;
+    private Set<Competencia> competencias = new HashSet<>();
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
     private boolean isIniciante = false;
@@ -33,6 +37,7 @@ public class VagaResponse {
         this.localDaVaga = vaga.getLocalDaVaga();
         this.aceitaRemoto = vaga.isAceitaRemoto();
         this.dataLimiteCandidatura = vaga.getDataLimiteCandidatura();
+        this.competencias = vaga.getCompetencias();
         this.criadoEm = vaga.getCriadoEm();
         this.atualizadoEm = vaga.getAtualizadoEm();
         this.isIniciante = vaga.isIniciante();
