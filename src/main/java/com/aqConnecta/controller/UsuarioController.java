@@ -51,9 +51,14 @@ public class UsuarioController {
         }
     }
 
-    @GetMapping("/localizar_por_url/{userUrl}")
+    @GetMapping("/{userUrl}")
     public ResponseEntity<Object> localizarPorUrl(@PathVariable String userUrl) {
         return service.localizarPorUrl(userUrl);
+    }
+
+    @GetMapping("/listar")
+    public ResponseEntity<Object> listar(@RequestParam(value = "userUrl", required = false, defaultValue = "") String userUrl) {
+        return service.listar(userUrl);
     }
 
     @PostMapping("/registrar")

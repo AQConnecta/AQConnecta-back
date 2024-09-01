@@ -1,5 +1,6 @@
 package com.aqConnecta.repository;
 
+import com.aqConnecta.DTOs.response.CompetenciaCountDTO;
 import com.aqConnecta.model.Competencia;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +21,6 @@ public interface CompetenciaRepository extends JpaRepository<Competencia, UUID> 
             "INNER JOIN TB_VAGA TV ON RL_VAGA_COMPETENCIA.ID_VAGA = TV.ID " +
             "GROUP BY TC.ID, TC.DESCRICAO", nativeQuery = true)
     List<Object[]> countCompetenciasInVagas();
-
 
     Page<Competencia> findByDescricaoContainingIgnoreCase(String descricao, Pageable pageable);
 

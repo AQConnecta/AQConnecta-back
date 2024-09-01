@@ -9,13 +9,13 @@ import com.aqConnecta.model.Usuario;
 import com.aqConnecta.repository.CandidaturaRepository;
 import com.aqConnecta.repository.VagaRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -76,7 +76,7 @@ public class VagaService {
 
     // Listar todas as vagas do sistema
     // TODO: Implementar os filtros
-    public ResponseEntity<Object> listarVagas() {
+    public ResponseEntity<Object> listarVagas(String titulo, UUID idCompetencia) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         // TODO remover essa bosta de contains dps do riume arrumar o security
@@ -87,7 +87,17 @@ public class VagaService {
         try {
             LocalDateTime now = LocalDateTime.now();
 
-            List<Vaga> vagas = vagaRepository.findAll().stream()
+            List<Vaga> vagas;
+
+            if (!Strings.isEmpty(titulo)) {
+                vagas = vagaRepository.findByTituloContainingIgnoreCase(titulo);
+            } else if (idCompetencia != null) {
+                vagas = vagaRepository.findByCompetenciaId(idCompetencia);
+            } else {
+                vagas = vagaRepository.findAll();
+            }
+
+            vagas = vagas.stream()
                     .filter(vaga -> vaga.getDeletadoEm() == null)
                     .filter(vaga -> vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now))
                     .collect(Collectors.toList());
@@ -233,11 +243,11 @@ public class VagaService {
             Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
             vaga.setCandidaturas(new HashSet<>());
             vaga.getCandidaturas().add(new Candidatura().builder()
-                                                        .usuario(usuario)
-                                                        .vaga(vaga)
-                                                        .curriculo(curriculoId)
-                                                        .curriculoUrl(usuario.getCurriculo().get(curriculoId))
-                                                        .build());
+                    .usuario(usuario)
+                    .vaga(vaga)
+                    .curriculo(curriculoId)
+                    .curriculoUrl(usuario.getCurriculo().get(curriculoId))
+                    .build());
 
             vaga = vagaRepository.save(vaga);
 

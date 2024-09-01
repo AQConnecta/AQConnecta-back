@@ -1,5 +1,6 @@
 package com.aqConnecta.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,6 +14,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 	Optional<Usuario> findByEmail(String email);
 
 	Optional<Usuario> findByUserUrl(String userUrl);
+
+	List<Usuario> findAllByNomeContainingIgnoreCase(String nome);
+
+//	List<Usuario> findAllByUserUrl(String userUrl);
 
 	Boolean existsByUserUrl(String userUrl);
 

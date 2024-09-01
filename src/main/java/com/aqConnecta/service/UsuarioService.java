@@ -2,12 +2,13 @@ package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
+import com.aqConnecta.DTOs.response.MeuUsuarioResponse;
 import com.aqConnecta.DTOs.response.OutroUsuarioResponse;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.*;
 import com.aqConnecta.repository.*;
-import com.aqConnecta.security.UserSS;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -124,6 +125,16 @@ public class UsuarioService {
     }
 
     public ResponseEntity<Object> localizarPorUrl(String userUrl) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        assert authentication != null;
+        String username = (String) authentication.getPrincipal();
+        Usuario usuarioLogado = usuarioRepository.findByEmail(username).get();
+
         Optional<Usuario> usuario = usuarioRepository.findByUserUrl(userUrl);
 
         if (usuario.isEmpty()) {
@@ -134,10 +145,15 @@ public class UsuarioService {
             return ResponseHandler.generateResponse("Usuário não existe mais!", HttpStatus.NOT_FOUND, null);
         }
 
-        OutroUsuarioResponse outroUsuarioResponse = new OutroUsuarioResponse();
-        outroUsuarioResponse.inToOut(usuario.get());
-
-        return ResponseHandler.generateResponse("Usuário encontrado!", HttpStatus.OK, outroUsuarioResponse);
+        if (usuario.get().getId() == usuarioLogado.getId()) {
+            MeuUsuarioResponse meuUsuarioResponse = new MeuUsuarioResponse();
+            meuUsuarioResponse.inToOut(usuario.get());
+            return ResponseHandler.generateResponse("Usuário encontrado!", HttpStatus.OK, meuUsuarioResponse);
+        } else {
+            OutroUsuarioResponse outroUsuarioResponse = new OutroUsuarioResponse();
+            outroUsuarioResponse.inToOut(usuario.get());
+            return ResponseHandler.generateResponse("Usuário encontrado!", HttpStatus.OK, outroUsuarioResponse);
+        }
     }
 
     public Usuario localizarPorEmail(String email) throws Exception {
@@ -206,7 +222,7 @@ public class UsuarioService {
     public ResponseEntity<Object> salvarImagemPerfil(MultipartFile file) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous") ) {
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
 
@@ -226,7 +242,7 @@ public class UsuarioService {
     public ResponseEntity<Object> removerImagemPerfil() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous") ) {
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
 
@@ -272,6 +288,7 @@ public class UsuarioService {
             return ResponseHandler.generateResponse("Houve um erro ao enviar o currículo.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
+
     public ResponseEntity<Object> removerCurriculo(Integer id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -313,6 +330,31 @@ public class UsuarioService {
         }
     }
 
+    public ResponseEntity<Object> listar(String userUrl) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Verifica se o usuário está autenticado e não é anônimo
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            assert authentication != null;
+            List<Usuario> usuarios;
+            usuarios = Strings.isEmpty(userUrl) ? usuarioRepository.findAll() : usuarioRepository.findAllByNomeContainingIgnoreCase(userUrl);
+            List<OutroUsuarioResponse> usuarioResponses = new ArrayList<>();
+            usuarios.forEach(usuario -> {
+                OutroUsuarioResponse usuarioResponse = new OutroUsuarioResponse();
+                usuarioResponse.inToOut(usuario);
+                usuarioResponses.add(usuarioResponse);
+            });
+            return ResponseHandler.generateResponse("Filtro de usuário feito!", HttpStatus.OK, usuarioResponses);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao filtrar usuários.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+
     public ResponseEntity<Object> listarCandidaturas() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -326,9 +368,9 @@ public class UsuarioService {
             String username = (String) authentication.getPrincipal();
             Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
             List<Vaga> vagas = vagaRepository.findAllById(candidaturaRepository.findAllCandidaturaByUsuarioId(usuario.getId())
-                                                                            .stream()
-                                                                            .map(candidatura -> candidatura.getVaga().getId())
-                                                                            .collect(Collectors.toList()));
+                    .stream()
+                    .map(candidatura -> candidatura.getVaga().getId())
+                    .collect(Collectors.toList()));
             return ResponseHandler.generateResponse("Todos as vagas candidatadas do usuario", HttpStatus.OK, vagas);
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao listar as candidaturas.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());

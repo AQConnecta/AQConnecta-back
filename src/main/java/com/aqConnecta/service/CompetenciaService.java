@@ -23,9 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -228,7 +226,7 @@ public class CompetenciaService {
             List<CompetenciaCountDTO> competenciaCountDTOS =
                     results.stream()
                             .map(result -> new CompetenciaCountDTO(
-                                    new Competencia(byteArrayToUUID((byte[]) result[0]), result[1].toString()),
+                                    new Competencia(UUID.fromString(new String((byte[]) result[0])), result[1].toString()),
                                     ((Number) result[2]).longValue()
                             ))
                             .toList();
