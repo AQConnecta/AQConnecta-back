@@ -27,8 +27,10 @@ public class VagaController {
     }
 
     @GetMapping("/listar")
-    public ResponseEntity<Object> listarVagas() {
-        return service.listarVagas();
+    public ResponseEntity<Object> listarVagas(
+            @RequestParam(value = "titulo", required = false, defaultValue = "") String titulo,
+            @RequestParam(value = "idCompetencia", required = false, defaultValue = "") UUID idCompetencia) {
+        return service.listarVagas(titulo, idCompetencia);
     }
 
     @GetMapping("/listar/{idUsuario}")

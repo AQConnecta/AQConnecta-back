@@ -1,10 +1,8 @@
 package com.aqConnecta.DTOs.response;
 
 import com.aqConnecta.model.*;
-import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Getter
@@ -12,7 +10,7 @@ import java.util.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UsuarioResponse {
+public class MeuUsuarioResponse {
     private UUID id;
     private String email;
     private String nome;
