@@ -246,7 +246,6 @@ public class VagaService {
                     .usuario(usuario)
                     .vaga(vaga)
                     .curriculo(curriculoId)
-                    .curriculoUrl(usuario.getCurriculo().get(curriculoId))
                     .build());
 
             vaga = vagaRepository.save(vaga);

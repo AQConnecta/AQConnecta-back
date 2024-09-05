@@ -86,11 +86,9 @@ public class Usuario implements Serializable {
 	@Column(name = "FOTO_PERFIL")
 	private String fotoPerfil;
 
-	@ElementCollection(fetch = FetchType.EAGER)
-	@CollectionTable(name = "RL_USUARIO_CURRICULO", joinColumns = @JoinColumn(name = "USUARIO_ID"))
-	@MapKeyColumn(name = "ID")
+	@OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
 //	@JsonManagedReference // evitar recursão infinita
-	private Map<Integer, String> curriculo = new HashMap<>();
+	private Set<Curriculo> curriculo = new HashSet<>();
 
 //	@OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
 //	private Set<Candidatura> candidaturas = new HashSet<>();

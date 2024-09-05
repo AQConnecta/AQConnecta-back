@@ -272,15 +272,20 @@ public class UsuarioService {
             String username = (String) authentication.getPrincipal();
             Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
 
+            // Se o HashSet estiver nulo, inicializa um novo HashSet
             if (usuario.getCurriculo() == null) {
-                usuario.setCurriculo(new HashMap<>());
+                usuario.setCurriculo(new HashSet<>());
             }
 
-            int proximaSequencia = usuario.getCurriculo().keySet().stream()
-                    .max(Integer::compareTo)
-                    .orElse(0) + 1;
+            // Cria um novo objeto Curriculo
+            Curriculo novoCurriculo = Curriculo.builder()
+                    .curriculo(documentoService.upload(file))  // Insere o link ou o caminho do arquivo
+                    .nomeCuriculo(file.getOriginalFilename())  // Define o nome original do arquivo
+                    .usuario(usuario)  // Associa o currículo ao usuário
+                    .build();
 
-            usuario.getCurriculo().put(proximaSequencia, documentoService.upload(file));
+            // Adiciona o novo currículo ao conjunto de currículos
+            usuario.getCurriculo().add(novoCurriculo);
             usuarioRepository.save(usuario);
 
             return ResponseHandler.generateResponse("Currículo adicionado com sucesso", HttpStatus.OK, documentoService.upload(file));
@@ -288,6 +293,7 @@ public class UsuarioService {
             return ResponseHandler.generateResponse("Houve um erro ao enviar o currículo.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
+
 
     public ResponseEntity<Object> removerCurriculo(Integer id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -302,7 +308,13 @@ public class UsuarioService {
             String username = (String) authentication.getPrincipal();
             Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
 
-            usuario.getCurriculo().remove(id);
+            // Procura o currículo pelo ID e remove do Set
+            Curriculo curriculoParaRemover = usuario.getCurriculo().stream()
+                    .filter(curriculo -> curriculo.getId().equals(id))
+                    .findFirst()
+                    .orElseThrow(() -> new Exception("Currículo não encontrado"));
+
+            usuario.getCurriculo().remove(curriculoParaRemover);
             usuarioRepository.save(usuario);
 
             return ResponseHandler.generateResponse("Currículo removido com sucesso", HttpStatus.OK);
@@ -310,6 +322,7 @@ public class UsuarioService {
             return ResponseHandler.generateResponse("Houve um erro ao remover o currículo.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
+
 
     public ResponseEntity<Object> listarCurriculo() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -324,9 +337,9 @@ public class UsuarioService {
             String username = (String) authentication.getPrincipal();
             Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
 
-            return ResponseHandler.generateResponse("Todos os curriculos do usuario", HttpStatus.OK, usuario.getCurriculo());
+            return ResponseHandler.generateResponse("Todos os currículos do usuário", HttpStatus.OK, usuario.getCurriculo());
         } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao remover o currículo.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return ResponseHandler.generateResponse("Houve um erro ao listar os currículos.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
