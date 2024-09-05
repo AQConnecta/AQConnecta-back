@@ -56,6 +56,8 @@ public class UsuarioService {
     private VagaRepository vagaRepository;
     @Autowired
     private CandidaturaRepository candidaturaRepository;
+    @Autowired
+    private CurriculoRepository curriculoRepository;
 
     public ResponseEntity<Object> saveUsuario(RegistroRequest registro) throws RuntimeException {
 
@@ -259,10 +261,9 @@ public class UsuarioService {
         }
     }
 
-    public ResponseEntity<Object> anexarCurriculo(MultipartFile file) {
+    public ResponseEntity<Object> anexarCurriculo(MultipartFile file, String nome) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Verifica se o usuário está autenticado e não é anônimo
         if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
@@ -272,21 +273,18 @@ public class UsuarioService {
             String username = (String) authentication.getPrincipal();
             Usuario usuario = usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
 
-            // Se o HashSet estiver nulo, inicializa um novo HashSet
             if (usuario.getCurriculo() == null) {
                 usuario.setCurriculo(new HashSet<>());
             }
 
-            // Cria um novo objeto Curriculo
             Curriculo novoCurriculo = Curriculo.builder()
-                    .curriculo(documentoService.upload(file))  // Insere o link ou o caminho do arquivo
-                    .nomeCuriculo(file.getOriginalFilename())  // Define o nome original do arquivo
-                    .usuario(usuario)  // Associa o currículo ao usuário
+                    .curriculo(documentoService.upload(file))
+                    .nomeCuriculo(nome)
+                    .usuario(usuario)
                     .build();
 
             // Adiciona o novo currículo ao conjunto de currículos
-            usuario.getCurriculo().add(novoCurriculo);
-            usuarioRepository.save(usuario);
+            curriculoRepository.save(novoCurriculo);
 
             return ResponseHandler.generateResponse("Currículo adicionado com sucesso", HttpStatus.OK, documentoService.upload(file));
         } catch (Exception e) {

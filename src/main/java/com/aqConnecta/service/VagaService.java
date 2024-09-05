@@ -76,7 +76,7 @@ public class VagaService {
 
     // Listar todas as vagas do sistema
     // TODO: Implementar os filtros
-    public ResponseEntity<Object> listarVagas(String titulo, UUID idCompetencia) {
+    public ResponseEntity<Object> listarVagas(String titulo, UUID idCompetencia, Boolean iniciante) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         // TODO remover essa bosta de contains dps do riume arrumar o security
@@ -86,9 +86,9 @@ public class VagaService {
 
         try {
             LocalDateTime now = LocalDateTime.now();
-
             List<Vaga> vagas;
 
+            // Filtra por título, competência ou todas as vagas
             if (!Strings.isEmpty(titulo)) {
                 vagas = vagaRepository.findByTituloContainingIgnoreCase(titulo);
             } else if (idCompetencia != null) {
@@ -97,11 +97,20 @@ public class VagaService {
                 vagas = vagaRepository.findAll();
             }
 
+            // Aplica os filtros de deletado e data limite
             vagas = vagas.stream()
-                    .filter(vaga -> vaga.getDeletadoEm() == null)
-                    .filter(vaga -> vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now))
+                    .filter(vaga -> vaga.getDeletadoEm() == null) // Vagas não deletadas
+                    .filter(vaga -> vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now)) // Dentro do prazo de candidatura
                     .collect(Collectors.toList());
 
+            // Aplica o filtro de "iniciante" se o parâmetro foi fornecido
+            if (iniciante != null) {
+                vagas = vagas.stream()
+                        .filter(vaga -> vaga.isIniciante() == iniciante) // Filtra baseado no campo isIniciante
+                        .collect(Collectors.toList());
+            }
+
+            // Gera a resposta
             List<VagaResponse> vagasResponse = fillVagaResponse(vagas);
             if (!vagasResponse.isEmpty()) {
                 return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, vagasResponse);
@@ -111,6 +120,7 @@ public class VagaService {
             return ResponseHandler.generateResponse("Houve um erro ao tentar listar as vagas.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
+
 
 
     public ResponseEntity<Object> listarVagasPorUsuario(UUID idUsuario) {

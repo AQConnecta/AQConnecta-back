@@ -112,8 +112,8 @@ public class UsuarioController {
     }
 
     @PostMapping("/anexar-curriculo")
-    public ResponseEntity<Object> anexarCurriculo(@RequestParam("file") MultipartFile file) {
-        return service.anexarCurriculo(file);
+    public ResponseEntity<Object> anexarCurriculo(@RequestParam("file") MultipartFile file, @RequestParam("nome") String nome) {
+        return service.anexarCurriculo(file, nome);
     }
 
     @DeleteMapping("/remover-curriculo/{idCurriculo}")
