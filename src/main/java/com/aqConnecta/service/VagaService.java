@@ -241,7 +241,6 @@ public class VagaService {
     public ResponseEntity<Object> candidatar(UUID vagaId, Integer curriculoId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Verifica se o usuário está autenticado e não é anônimo
         if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
@@ -250,13 +249,23 @@ public class VagaService {
             assert authentication != null;
             String username = (String) authentication.getPrincipal();
             Usuario usuario = usuarioService.localizarPorEmail(username);
+
             Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
-            vaga.setCandidaturas(new HashSet<>());
-            vaga.getCandidaturas().add(new Candidatura().builder()
+
+            boolean jaCandidatado = vaga.getCandidaturas().stream()
+                    .anyMatch(candidatura -> candidatura.getUsuario().getId().equals(usuario.getId()));
+
+            if (jaCandidatado) {
+                return ResponseHandler.generateResponse("Você já se candidatou a esta vaga.", HttpStatus.BAD_REQUEST);
+            }
+
+            Candidatura novaCandidatura = Candidatura.builder()
                     .usuario(usuario)
                     .vaga(vaga)
                     .curriculo(curriculoId)
-                    .build());
+                    .build();
+
+            vaga.getCandidaturas().add(novaCandidatura);
 
             vaga = vagaRepository.save(vaga);
 
@@ -265,6 +274,7 @@ public class VagaService {
             return ResponseHandler.generateResponse("Houve um erro ao enviar a candidatura.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
+
 
     public ResponseEntity<Object> listarCandidaturas(UUID vagaId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

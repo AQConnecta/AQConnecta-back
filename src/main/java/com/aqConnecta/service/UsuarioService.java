@@ -279,7 +279,7 @@ public class UsuarioService {
 
             Curriculo novoCurriculo = Curriculo.builder()
                     .curriculo(documentoService.upload(file))
-                    .nomeCuriculo(nome)
+                    .nomeCurriculo(nome)
                     .usuario(usuario)
                     .build();
 
