@@ -29,8 +29,9 @@ public class VagaController {
     @GetMapping("/listar")
     public ResponseEntity<Object> listarVagas(
             @RequestParam(value = "titulo", required = false, defaultValue = "") String titulo,
-            @RequestParam(value = "idCompetencia", required = false, defaultValue = "") UUID idCompetencia) {
-        return service.listarVagas(titulo, idCompetencia);
+            @RequestParam(value = "idCompetencia", required = false) UUID idCompetencia,
+            @RequestParam(value = "iniciante", required = false) Boolean iniciante) {
+        return service.listarVagas(titulo, idCompetencia, iniciante);
     }
 
     @GetMapping("/listar/{idUsuario}")

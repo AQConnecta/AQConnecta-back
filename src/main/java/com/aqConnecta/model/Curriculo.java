@@ -31,6 +31,6 @@ public class Curriculo implements Serializable {
     private String curriculo;
 
     @Column(name = "NOME_CURRICULO")
-    private String nomeCuriculo;
+    private String nomeCurriculo;
 
 }
