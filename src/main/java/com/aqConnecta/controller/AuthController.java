@@ -48,6 +48,10 @@ public class AuthController {
             Authentication authentication =
                     authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getSenha()));
             Usuario usuario = service.localizarPorEmail(authentication.getName());
+            if (usuario.getDeletado()) {
+                ErrorResponse response = new ErrorResponse(HttpStatus.FORBIDDEN, "Usuário foi desativado do sistema");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
             LoginResponse response = new LoginResponse(usuario, jwtUtil.generateToken(usuario.getEmail()));
             log.info("Usuário {} logou no sistema", response.getUsuario().getEmail());
             return ResponseEntity.ok(response);

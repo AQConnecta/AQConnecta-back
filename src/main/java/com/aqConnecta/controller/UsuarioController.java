@@ -121,6 +121,11 @@ public class UsuarioController {
         return service.removerCurriculo(idCurriculo);
     }
 
+    @DeleteMapping("/inativar-usuario/{idUsuario}")
+    public ResponseEntity<Object> inativarUsuario(@PathVariable UUID idUsuario) {
+        return service.inativarUsuario(idUsuario);
+    }
+
     @GetMapping("/curriculos")
     public ResponseEntity<Object> listarCurriculos() {
         return service.listarCurriculo();

@@ -311,6 +311,48 @@ public class UsuarioService {
         }
     }
 
+    private boolean isUserAnonymous(Authentication authentication) {
+        return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
+    }
+
+    public ResponseEntity<Object> inativarUsuario(UUID idUsuario) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (isUserAnonymous(authentication)) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            Usuario usuario = localizar(idUsuario);
+            if (usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Você não tem permissão para inativar um usuário.", HttpStatus.FORBIDDEN);
+            }
+            usuario.setDeletado(true);
+            usuarioRepository.save(usuario);
+            return ResponseHandler.generateResponse("Usuário inativado com súcesso!", HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<Object> reativarUsuario(UUID idUsuario) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (isUserAnonymous(authentication)) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            Usuario usuario = localizar(idUsuario);
+            if (usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Você não tem permissão para reativar um usuário.", HttpStatus.FORBIDDEN);
+            }
+            usuario.setDeletado(false);
+            usuarioRepository.save(usuario);
+            return ResponseHandler.generateResponse("Usuário ativado com súcesso!", HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public ResponseEntity<Object> listarCurriculo() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

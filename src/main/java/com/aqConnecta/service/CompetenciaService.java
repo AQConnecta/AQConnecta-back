@@ -1,7 +1,9 @@
 package com.aqConnecta.service;
 
+import com.aqConnecta.DTOs.request.CompetenciaRequest;
 import com.aqConnecta.DTOs.request.CompetenciaUsuarioRequest;
 import com.aqConnecta.DTOs.request.CompetenciaVagaRequest;
+import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.CompetenciaCountDTO;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.Competencia;
@@ -39,6 +41,84 @@ public class CompetenciaService {
     private CompetenciaRepository competenciaRepository;
     @Autowired
     private VagaRepository vagaRepository;
+
+
+    public ResponseEntity<Object> cadastrarCompetencia(CompetenciaRequest registro) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (isUserAnonymous(authentication)) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+            if (usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.", HttpStatus.FORBIDDEN);
+            }
+            Competencia competencia = new Competencia().builder()
+                    .id(UUID.randomUUID())
+                    .descricao(registro.getDescricao())
+                    .build();
+
+            if (!competenciaRepository.findByDescricaoIgnoreCase(registro.getDescricao()).isEmpty()) {
+                return ResponseHandler.generateResponse("Essa competencia ja existe!", HttpStatus.CONFLICT, competencia);
+            }
+            competenciaRepository.save(competencia);
+            return ResponseHandler.generateResponse("Competencia cadastrada com súcesso!", HttpStatus.CREATED, competencia);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<Object> alterarCompetencia(UUID idCompetencia, CompetenciaRequest registro) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (isUserAnonymous(authentication)) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+            if (usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.", HttpStatus.FORBIDDEN);
+            }
+            Optional<Competencia> competencia = competenciaRepository.findById(idCompetencia);
+            if (competencia.isPresent()) {
+                Competencia competenciaAlterada = new Competencia().builder()
+                        .id(registro.getId())
+                        .descricao(registro.getDescricao())
+                        .build();
+                if (!competenciaRepository.findByDescricaoIgnoreCase(registro.getDescricao()).isEmpty()) {
+                    return ResponseHandler.generateResponse("Essa competencia ja existe!", HttpStatus.CONFLICT, competencia);
+                }
+                competenciaRepository.save(competenciaAlterada);
+            }
+            return ResponseHandler.generateResponse("Competencia cadastrada com súcesso!", HttpStatus.CREATED, competencia);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<Object> deletarCompetencia(UUID idCompetencia) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (isUserAnonymous(authentication)) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+        }
+        try {
+            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+            if (usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.", HttpStatus.FORBIDDEN);
+            }
+            Optional<Competencia> competencia = competenciaRepository.findById(idCompetencia);
+            if (competencia.isPresent()) {
+                competenciaRepository.deleteFromVagaCompetencia(competencia.get().getId());
+                competenciaRepository.deleteFromUsuarioCompetencia(competencia.get().getId());
+                competenciaRepository.deleteCompetencia(competencia.get().getId());
+            }
+            return ResponseHandler.generateResponse("Competencia deletada com súcesso!", HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     public ResponseEntity<Object> relacionarCompetenciasUsuario(CompetenciaUsuarioRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

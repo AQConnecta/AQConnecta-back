@@ -1,7 +1,9 @@
 package com.aqConnecta.controller;
 
+import com.aqConnecta.DTOs.request.CompetenciaRequest;
 import com.aqConnecta.DTOs.request.CompetenciaUsuarioRequest;
 import com.aqConnecta.DTOs.request.CompetenciaVagaRequest;
+import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.service.CompetenciaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,21 @@ public class CompetenciaController {
                                                      @RequestParam(value = "page", required = false, defaultValue = "0") int page,
                                                      @RequestParam(value = "size", required = false, defaultValue = "100") int size) {
         return service.listarCompetencias(search, page, size);
+    }
+
+    @PostMapping("/cadastrar")
+    public ResponseEntity<Object> cadastrarCompetencia(@RequestBody CompetenciaRequest competenciaRequest) {
+        return service.cadastrarCompetencia(competenciaRequest);
+    }
+
+    @PutMapping("/alterar/{idCompetencia}")
+    public ResponseEntity<Object> alterarCompetencia(@PathVariable UUID idCompetencia, @RequestBody CompetenciaRequest competenciaRequest) {
+        return service.alterarCompetencia(idCompetencia, competenciaRequest);
+    }
+
+    @DeleteMapping("/deletar/{idCompetencia}")
+    public ResponseEntity<Object> deletarCompetencia(@PathVariable UUID idCompetencia) {
+        return service.deletarCompetencia(idCompetencia);
     }
 
     @PostMapping("/relacionar_competencia_usuario")
