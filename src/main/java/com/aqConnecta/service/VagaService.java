@@ -182,7 +182,7 @@ public class VagaService {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
             Optional<Vaga> vaga = vagaRepository.findById(idVaga);
             if (vaga.isPresent()) {
-                if (!vaga.get().getPublicador().getId().equals(usuario.getId())) {
+                if (!vaga.get().getPublicador().getId().equals(usuario.getId()) && usuario.verificarUsuarioNaoEAdministrador()) {
                     return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.UNAUTHORIZED);
                 }
                 Vaga vagaAlterada = new Vaga().builder()
