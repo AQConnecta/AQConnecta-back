@@ -322,12 +322,13 @@ public class UsuarioService {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
-            Usuario usuario = localizar(idUsuario);
+            Usuario usuario = localizarPorEmail(authentication.getName());
             if (usuario.verificarUsuarioNaoEAdministrador()) {
                 return ResponseHandler.generateResponse("Você não tem permissão para inativar um usuário.", HttpStatus.FORBIDDEN);
             }
-            usuario.setDeletado(true);
-            usuarioRepository.save(usuario);
+            Usuario usuarioDeletado = localizar(idUsuario);
+            usuarioDeletado.setDeletado(true);
+            usuarioRepository.save(usuarioDeletado);
             return ResponseHandler.generateResponse("Usuário inativado com súcesso!", HttpStatus.OK);
         } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -341,12 +342,13 @@ public class UsuarioService {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         try {
-            Usuario usuario = localizar(idUsuario);
+            Usuario usuario = localizarPorEmail(authentication.getName());
             if (usuario.verificarUsuarioNaoEAdministrador()) {
                 return ResponseHandler.generateResponse("Você não tem permissão para reativar um usuário.", HttpStatus.FORBIDDEN);
             }
-            usuario.setDeletado(false);
-            usuarioRepository.save(usuario);
+            Usuario usuarioDeletado = usuarioRepository.findById(idUsuario).get();
+            usuarioDeletado.setDeletado(false);
+            usuarioRepository.save(usuarioDeletado);
             return ResponseHandler.generateResponse("Usuário ativado com súcesso!", HttpStatus.OK);
         } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
