@@ -4,9 +4,11 @@ import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.DTOs.response.VagaResponse;
 import com.aqConnecta.model.Candidatura;
+import com.aqConnecta.model.Curriculo;
 import com.aqConnecta.model.Vaga;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.repository.CandidaturaRepository;
+import com.aqConnecta.repository.CurriculoRepository;
 import com.aqConnecta.repository.VagaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
@@ -33,6 +35,8 @@ public class VagaService {
 
     @Autowired
     private CandidaturaRepository candidaturaRepository;
+    @Autowired
+    private CurriculoRepository curriculoRepository;
 
     public ResponseEntity<Object> cadastrarVaga(VagaRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -251,7 +255,7 @@ public class VagaService {
             Usuario usuario = usuarioService.localizarPorEmail(username);
 
             Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
-
+            Curriculo curriculo = curriculoRepository.getReferenceById(curriculoId);
             boolean jaCandidatado = vaga.getCandidaturas().stream()
                     .anyMatch(candidatura -> candidatura.getUsuario().getId().equals(usuario.getId()));
 
@@ -263,6 +267,7 @@ public class VagaService {
                     .usuario(usuario)
                     .vaga(vaga)
                     .curriculo(curriculoId)
+                    .curriculoUrl(curriculo.getCurriculo())
                     .build();
 
             vaga.getCandidaturas().add(novaCandidatura);
