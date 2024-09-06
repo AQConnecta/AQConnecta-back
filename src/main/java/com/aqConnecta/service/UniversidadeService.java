@@ -128,28 +128,26 @@ public class UniversidadeService {
 
 
     public ResponseEntity<Object> deletarUniversidade(UUID idUniversidade) {
-        //try {
-        //    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        //  if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-        //    return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        // }
-        // Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-        //     Optional<Universidade> universidade = universidadeRepository.findById(idUniversidade);
-//
-        //          if (usuario.verificarUsuarioNaoEAdministrador()) {
-        //            return ResponseHandler.generateResponse("Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
-        //      }
-        //    if (universidade.isPresent()) {
-        //      universidadeRepository.deleteById(idUniversidade);
-        //} else {
-        //            return ResponseHandler.generateResponse("Não é possível excluir uma universidade que não existente.", HttpStatus.NOT_FOUND);
-        //      }
-        //    return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
-        //       } catch (Exception e) {
-        //         return ResponseHandler.generateResponse("Houve um erro ao tentar excluir a universidade.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
-        //   }
-        return ResponseHandler.generateResponse("Houve um erro ao tentar excluir a universidade.", HttpStatus.INTERNAL_SERVER_ERROR, "Não implementado ainda");
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+            }
+            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+            Optional<Universidade> universidade = universidadeRepository.findById(idUniversidade);
+
+            if (usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
+            }
+            if (universidade.isPresent()) {
+                universidadeRepository.deleteById(idUniversidade);
+            } else {
+                return ResponseHandler.generateResponse("Não é possível excluir uma universidade que não existente.", HttpStatus.NOT_FOUND);
+            }
+            return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao tentar excluir a universidade.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
     }
 
     private boolean isUserAnonymous(Authentication authentication) {
