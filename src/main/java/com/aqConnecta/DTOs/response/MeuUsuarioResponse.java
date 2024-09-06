@@ -22,7 +22,7 @@ public class MeuUsuarioResponse {
     private Boolean deletado = false;
     private Boolean ativado = false;
     private String fotoPerfil;
-    private Map<Integer, String> curriculo = new HashMap<>();
+    private Set<Curriculo> curriculo = new HashSet<>();
 
 
     public void inToOut(Usuario usuarioIn) {
@@ -37,7 +37,7 @@ public class MeuUsuarioResponse {
         this.deletado = usuarioIn.getDeletado();
         this.ativado = usuarioIn.getAtivado();
         this.fotoPerfil = usuarioIn.getFotoPerfil();
-        this.curriculo.putAll(usuarioIn.getCurriculo());
+        this.curriculo.addAll(usuarioIn.getCurriculo());
     }
 
 }
