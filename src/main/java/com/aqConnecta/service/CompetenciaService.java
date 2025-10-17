@@ -5,6 +5,7 @@ import com.aqConnecta.DTOs.request.CompetenciaUsuarioRequest;
 import com.aqConnecta.DTOs.request.CompetenciaVagaRequest;
 import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.CompetenciaCountDTO;
+import com.aqConnecta.DTOs.response.HotCompetencyDTO;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.Competencia;
 import com.aqConnecta.model.Usuario;
@@ -41,6 +42,12 @@ public class CompetenciaService {
     private CompetenciaRepository competenciaRepository;
     @Autowired
     private VagaRepository vagaRepository;
+    
+    @Autowired
+    private HotCompetenciesService hotCompetenciesService;
+    
+    @Autowired
+    private HotCompetenciesMetricsService metricsService;
 
 
     public ResponseEntity<Object> cadastrarCompetencia(CompetenciaRequest registro) {
@@ -302,20 +309,58 @@ public class CompetenciaService {
             if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
                 return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
             }
-            List<Object[]> results = competenciaRepository.countCompetenciasInVagas();
-            List<CompetenciaCountDTO> competenciaCountDTOS =
-                    results.stream()
-                            .map(result -> new CompetenciaCountDTO(
-                                    new Competencia(UUID.fromString(new String((byte[]) result[0])), result[1].toString()),
-                                    ((Number) result[2]).longValue()
-                            ))
-                            .toList();
-
-            assignLevels(competenciaCountDTOS);
-
-            return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, competenciaCountDTOS);
+            
+            // Usar o novo serviço avançado para cálculo de hot competencies
+            List<HotCompetencyDTO> hotCompetencies = hotCompetenciesService.calculateHotCompetencies("MONTH", "ALL");
+            
+            return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, hotCompetencies);
         } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            log.error("Erro ao listar competências quentes", e);
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competências quentes.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+    
+    /**
+     * Nova versão melhorada do método de listagem de competências quentes
+     * com suporte a filtros e timeframes
+     */
+    public ResponseEntity<Object> listarCompetenciasQuentesAvancado(String timeframe, String category) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+            }
+            
+            // Validar parâmetros
+            if (timeframe == null || timeframe.isEmpty()) {
+                timeframe = "MONTH";
+            }
+            if (category == null || category.isEmpty()) {
+                category = "ALL";
+            }
+            
+            List<HotCompetencyDTO> hotCompetencies = hotCompetenciesService.calculateHotCompetencies(timeframe, category);
+            
+            return ResponseHandler.generateResponse("Listagem avançada feita com sucesso!", HttpStatus.OK, hotCompetencies);
+        } catch (Exception e) {
+            log.error("Erro ao listar competências quentes avançadas", e);
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competências quentes.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+    
+    public ResponseEntity<Object> getHotCompetenciesMetrics() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+            }
+            
+            HotCompetenciesMetricsService.HotCompetenciesMetrics metrics = metricsService.getMetrics();
+            
+            return ResponseHandler.generateResponse("Métricas obtidas com sucesso!", HttpStatus.OK, metrics);
+        } catch (Exception e) {
+            log.error("Erro ao obter métricas", e);
+            return ResponseHandler.generateResponse("Erro ao obter métricas.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 

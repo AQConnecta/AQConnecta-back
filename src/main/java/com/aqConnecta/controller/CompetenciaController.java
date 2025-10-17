@@ -80,6 +80,18 @@ public class CompetenciaController {
     public ResponseEntity<Object> listarCompetenciasQuentes() {
         return service.listarCompetenciasQuentes();
     }
+    
+    @GetMapping("/competencias_quentes_avancado")
+    public ResponseEntity<Object> listarCompetenciasQuentesAvancado(
+            @RequestParam(value = "timeframe", defaultValue = "MONTH") String timeframe,
+            @RequestParam(value = "category", defaultValue = "ALL") String category) {
+        return service.listarCompetenciasQuentesAvancado(timeframe, category);
+    }
+    
+    @GetMapping("/competencias_quentes/metrics")
+    public ResponseEntity<Object> getHotCompetenciesMetrics() {
+        return service.getHotCompetenciesMetrics();
+    }
 
     // TODO fazer na proxima release
 //    @GetMapping("/localizar/{idEndereco}")
