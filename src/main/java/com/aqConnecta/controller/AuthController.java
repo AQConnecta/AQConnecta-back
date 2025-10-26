@@ -2,7 +2,6 @@ package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
-import com.aqConnecta.DTOs.response.ErrorResponse;
 import com.aqConnecta.DTOs.response.LoginResponse;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.Usuario;
@@ -15,8 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,18 +22,15 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UsuarioService service;
-    private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JWTUtil jwtUtil;
 
     @Autowired
     public AuthController(
-            UsuarioService service,
-            PasswordEncoder passwordEncoder,
-            AuthenticationManager manager,
-            JWTUtil jwtUtil) {
+        UsuarioService service,
+        AuthenticationManager manager,
+        JWTUtil jwtUtil) {
         this.service = service;
-        this.passwordEncoder = passwordEncoder;
         this.authenticationManager = manager;
         this.jwtUtil = jwtUtil;
     }
@@ -45,24 +39,18 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
-            Authentication authentication =
-                    authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getSenha()));
-            Usuario usuario = service.localizarPorEmail(authentication.getName());
-            if (usuario.getDeletado()) {
-                ErrorResponse response = new ErrorResponse(HttpStatus.FORBIDDEN, "Usuário foi desativado do sistema");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-            }
+            Usuario usuario = service.localizarPorEmail(request.getEmail());
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+                request.getEmail(),
+                request.getSenha()));
+
+            log.info("Usuário {} logou no sistema", usuario.getEmail());
             LoginResponse response = new LoginResponse(usuario, jwtUtil.generateToken(usuario.getEmail()));
-            log.info("Usuário {} logou no sistema", response.getUsuario().getEmail());
             return ResponseEntity.ok(response);
-        } catch (BadCredentialsException e) {
+        }
+        catch (BadCredentialsException e) {
             log.error("Usuário {} tentou logar com credenciais inválidas", request.getEmail());
-            ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST, "Usuário ou senha incorretos");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            return ResponseHandler.generateResponse("Usuário ou senha incorretos", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -75,19 +63,26 @@ public class AuthController {
     public ResponseEntity<?> confirmUserAccount(@RequestParam("token") String confirmationToken) {
         try {
             return service.confirmaEmail(confirmationToken);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error(e.getMessage());
-            return ResponseHandler.generateResponse("Erro ao confirmar o email", HttpStatus.BAD_REQUEST, e.getMessage());
+            return ResponseHandler.generateResponse("Erro ao confirmar o email",
+                HttpStatus.BAD_REQUEST,
+                e.getMessage());
         }
     }
 
     @RequestMapping(value = "/recuperando", method = {RequestMethod.GET, RequestMethod.POST})
-    public ResponseEntity<?> recoveryUser(@RequestParam("token") String confirmationToken, @RequestBody LoginRequest recupera) {
+    public ResponseEntity<?> recoveryUser(@RequestParam("token") String confirmationToken,
+        @RequestBody LoginRequest recupera) {
         try {
             return service.recuperarSenha(recupera, confirmationToken);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error(e.getMessage());
-            return ResponseHandler.generateResponse("Erro ao recuperar o usuário", HttpStatus.BAD_REQUEST, e.getMessage());
+            return ResponseHandler.generateResponse("Erro ao recuperar o usuário",
+                HttpStatus.BAD_REQUEST,
+                e.getMessage());
         }
     }
 
@@ -95,9 +90,12 @@ public class AuthController {
     public ResponseEntity<?> recuperandoUser(@RequestBody LoginRequest email) {
         try {
             return service.recuperarSenha(email);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error(e.getMessage());
-            return ResponseHandler.generateResponse("Erro ao recuperar o usuário", HttpStatus.BAD_REQUEST, e.getMessage());
+            return ResponseHandler.generateResponse("Erro ao recuperar o usuário",
+                HttpStatus.BAD_REQUEST,
+                e.getMessage());
         }
     }
 

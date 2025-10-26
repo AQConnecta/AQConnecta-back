@@ -12,8 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.flywaydb.core.Flyway;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,14 +29,12 @@ import org.testcontainers.containers.MariaDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
-
 import java.util.HashSet;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 @Testcontainers
 @ActiveProfiles("test")
@@ -70,7 +68,9 @@ class AuthControllerTest {
 
     @Container
     @ServiceConnection
-    final static private MariaDBContainer<?> databaseContainer = new MariaDBContainer<>("mariadb:10.10");
+    final static private MariaDBContainer<?>
+        databaseContainer =
+        new MariaDBContainer<>("mariadb:10.10");
 
     @Autowired
     private Flyway flyway;
@@ -88,7 +88,8 @@ class AuthControllerTest {
     private Usuario getUser() {
         final var permissoes = new HashSet<Permissao>();
         permissoes.add(this.permissaoRepository.findById(1L)
-            .orElseThrow(() -> new RuntimeException("Erro interno, não foi possivel criar conta com permissão de cliente")));
+            .orElseThrow(() -> new RuntimeException(
+                "Erro interno, não foi possivel criar conta com permissão de cliente")));
 
         return Usuario.builder()
             .id(UUID.randomUUID())
@@ -134,21 +135,22 @@ class AuthControllerTest {
 
         // Credenciais incorretas
         final var reqDto = LoginRequest.builder()
-                .email(this.email)
-                .senha("123")
-                .build();
+            .email(this.email)
+            .senha("123")
+            .build();
 
         final var reqJson = this.objectMapper.writeValueAsString(reqDto);
 
         this.mockMvc
-                .perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(reqJson)
-                        .with(csrf())
-                        .with(anonymous()))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.message").exists())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.not(Matchers.containsString(email))));
+            .perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(reqJson)
+                .with(csrf())
+                .with(anonymous()))
+            .andExpect(MockMvcResultMatchers.status().isBadRequest())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.message").exists())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.message",
+                Matchers.not(Matchers.containsString(email))));
     }
 
     @Test
@@ -160,21 +162,21 @@ class AuthControllerTest {
 
         // Credenciais corretas
         final var reqDto = LoginRequest.builder()
-                .email(this.email)
-                .senha(this.senha)
-                .build();
+            .email(this.email)
+            .senha(this.senha)
+            .build();
 
         final var reqJson = this.objectMapper.writeValueAsString(reqDto);
 
         this.mockMvc
-                .perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(reqJson)
-                        .with(csrf())
-                        .with(anonymous()))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.token").exists())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.usuario").exists());
+            .perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(reqJson)
+                .with(csrf())
+                .with(anonymous()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.token").exists())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.usuario").exists());
     }
 
     @Test
@@ -187,19 +189,19 @@ class AuthControllerTest {
 
         // Credenciais corretas
         final var reqDto = LoginRequest.builder()
-                .email(this.email)
-                .senha(this.senha)
-                .build();
+            .email(this.email)
+            .senha(this.senha)
+            .build();
 
         final var reqJson = this.objectMapper.writeValueAsString(reqDto);
 
         this.mockMvc
-                .perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(reqJson)
-                        .with(csrf())
-                        .with(anonymous()))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.message").exists());
+            .perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(reqJson)
+                .with(csrf())
+                .with(anonymous()))
+            .andExpect(MockMvcResultMatchers.status().isForbidden())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.message").exists());
     }
 }
