@@ -98,7 +98,7 @@ public class UsuarioService {
         String corpoEmail = emailService.criarCorpoEmail(usuario.getNome(), text, link);
         emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
 
-        return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario.getUsuarioSemSenha());
+        return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario);
     }
 
     private String generateUserUrl(String nome) {
