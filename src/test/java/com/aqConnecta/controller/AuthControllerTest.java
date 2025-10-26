@@ -204,4 +204,27 @@ class AuthControllerTest {
             .andExpect(MockMvcResultMatchers.status().isForbidden())
             .andExpect(MockMvcResultMatchers.jsonPath("$.message").exists());
     }
+
+    @Test
+    @DisplayName("Não deveria retornar a senha do usuário")
+    void no_password_in_login_user_response() throws Exception {
+        final var usuario = this.getUser();
+        usuario.setAtivado(true);
+        this.usuarioRepository.save(usuario);
+
+        final var reqDto = LoginRequest.builder()
+            .email(this.email)
+            .senha(this.senha)
+            .build();
+        final var reqJson = this.objectMapper.writeValueAsString(reqDto);
+
+        this.mockMvc
+            .perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(reqJson)
+                .with(csrf())
+                .with(anonymous()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.usuario.senha").doesNotExist());
+    }
 }
