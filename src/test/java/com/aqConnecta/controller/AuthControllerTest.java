@@ -6,11 +6,14 @@ import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.repository.PermissaoRepository;
 import com.aqConnecta.repository.UsuarioRepository;
+import com.aqConnecta.security.JWTUtil;
+import com.aqConnecta.service.AuthService;
 import com.aqConnecta.service.DocumentoService;
 import com.aqConnecta.service.EmailService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.flywaydb.core.Flyway;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +23,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.data.util.Pair;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -29,7 +35,9 @@ import org.testcontainers.containers.MariaDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
@@ -58,6 +66,12 @@ class AuthControllerTest {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private JWTUtil jwtUtil;
+
+    @Autowired
+    private AuthService authService;
+
     // Mockamos esses para não interagirem com nada externo
     @MockBean
     private EmailService emailService;
@@ -80,7 +94,6 @@ class AuthControllerTest {
         flyway.clean();
         flyway.migrate();
     }
-
 
     final private String email = "teste@mail.com";
     final private String senha = "12345678";
@@ -155,7 +168,7 @@ class AuthControllerTest {
 
     @Test
     @DisplayName("Deveria autenticar um usuário com credenciais corretas e email confirmado")
-    void login_with_valid_credentials_and_confirmed_email() throws Exception {
+    void loginWithValidCredentialsAndConfirmedEmail() throws Exception {
         final var usuario = this.getUser();
         usuario.setAtivado(true);
         this.usuarioRepository.save(usuario);
@@ -175,13 +188,13 @@ class AuthControllerTest {
                 .with(csrf())
                 .with(anonymous()))
             .andExpect(MockMvcResultMatchers.status().isOk())
-            .andExpect(MockMvcResultMatchers.jsonPath("$.token").exists())
-            .andExpect(MockMvcResultMatchers.jsonPath("$.usuario").exists());
+            .andExpect(MockMvcResultMatchers.jsonPath("$.data.token").exists())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.data.usuario").exists());
     }
 
     @Test
     @DisplayName("Não deveria autenticar um usuário soft-deleted")
-    void login_as_disabled_user() throws Exception {
+    void loginAsDisabledUser() throws Exception {
         final var usuario = this.getUser();
         usuario.setAtivado(true);
         usuario.setDeletado(true);
@@ -207,7 +220,7 @@ class AuthControllerTest {
 
     @Test
     @DisplayName("Não deveria retornar a senha do usuário")
-    void no_password_in_login_user_response() throws Exception {
+    void noPasswordInLoginUserResponse() throws Exception {
         final var usuario = this.getUser();
         usuario.setAtivado(true);
         this.usuarioRepository.save(usuario);
@@ -225,6 +238,78 @@ class AuthControllerTest {
                 .with(csrf())
                 .with(anonymous()))
             .andExpect(MockMvcResultMatchers.status().isOk())
-            .andExpect(MockMvcResultMatchers.jsonPath("$.usuario.senha").doesNotExist());
+            .andExpect(MockMvcResultMatchers.jsonPath("$.data.usuario.senha").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Deveria reautenticar um usuário com um refresh token válido")
+    void reauthenticatingValidRefreshToken() throws Exception {
+        var usuario = this.getUser();
+        usuario.setAtivado(true);
+        usuario = this.usuarioRepository.save(usuario);
+
+        final var validRefreshToken = this.jwtUtil.generateRefreshToken(usuario.getId(), usuario.getEmail());
+        final var requestCookie = this.authService.obterRefreshCookie(validRefreshToken);
+
+        var result = this.mockMvc
+            .perform(post("/auth/refresh")
+                .with(csrf())
+                .with(anonymous())
+                .cookie(requestCookie))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.data.usuario").exists())
+            .andExpect(MockMvcResultMatchers.jsonPath("$.data.token").exists())
+            .andExpect(MockMvcResultMatchers.header().exists(HttpHeaders.SET_COOKIE))
+            .andReturn();
+
+        var responseCookie = result.getResponse().getCookie(requestCookie.getName());
+        Assertions.assertNotNull(responseCookie);
+
+        var claims = this.jwtUtil.getTokenValidatedClaims(responseCookie.getValue());
+        Assertions.assertTrue(claims.isPresent());
+        Assertions.assertTrue(this.jwtUtil.tokenValido(claims.get()));
+        Assertions.assertNotEquals(requestCookie.getValue(), responseCookie.getValue());
+    }
+
+
+    @Test
+    @DisplayName("Não deveria reautenticar um usuário com um refresh token inválido")
+    void shouldNotReauthenticateAnInvalidRefreshToken() throws Exception {
+        var usuario = this.getUser();
+        usuario.setAtivado(true);
+        usuario = this.usuarioRepository.save(usuario);
+
+        List<Pair<String, String>> invalidRefreshTokens = new ArrayList<>();
+        invalidRefreshTokens.add(Pair.of("Um access token não deve servir como refresh token",
+            this.jwtUtil.generateToken(usuario.getEmail())));
+
+        invalidRefreshTokens.add(Pair.of("Um refresh token expirado não deve reautenticar o usuário",
+            this.jwtUtil.generateRefreshToken(usuario.getId(), usuario.getEmail(), -1000)));
+
+        invalidRefreshTokens.add(Pair.of("Uma string que sequer é um token JWT não deveria reautenticar o usuário",
+            "claramenteNaoEhUmTokenJWT"));
+
+        for (var pair : invalidRefreshTokens) {
+            final var message = pair.getFirst();
+            final var token = pair.getSecond();
+
+            final var requestCookie = this.authService.obterRefreshCookie(token);
+
+            var result = this.mockMvc
+                .perform(post("/auth/refresh")
+                    .with(csrf())
+                    .with(anonymous())
+                    .cookie(requestCookie))
+                .andExpect(mvcResult -> Assertions.assertEquals(HttpStatus.UNAUTHORIZED.value(),
+                    mvcResult.getResponse().getStatus(), message))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").exists())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message",
+                    Matchers.containsString("Token inválido.")))
+                .andReturn();
+
+            var responseCookie = result.getResponse().getCookie(requestCookie.getName());
+            Assertions.assertNotNull(responseCookie, "Deveria ter um refresh cookie de remoção setado");
+            Assertions.assertNull(responseCookie.getValue(), "Deveria remover o cookie com refresh token inválido");
+        }
     }
 }
