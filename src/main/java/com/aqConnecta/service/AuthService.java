@@ -25,7 +25,7 @@ public class AuthService {
         this.environment = environment;
     }
 
-    private String obterNomeDoCookie() {
+    public String obterNomeDoCookie() {
         return this.applicationName + refreshCookieSuffix;
     }
 

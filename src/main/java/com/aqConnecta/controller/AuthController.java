@@ -47,6 +47,12 @@ public class AuthController {
         this.jwtUtil = jwtUtil;
     }
 
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(HttpServletResponse response) {
+        var cookie = this.authService.obterRefreshCookieDeRemocao();
+        response.addCookie(cookie);
+    }
 
     @ResponseBody
     @PostMapping("/refresh")
