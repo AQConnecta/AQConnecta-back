@@ -312,4 +312,24 @@ class AuthControllerTest {
             Assertions.assertNull(responseCookie.getValue(), "Deveria remover o cookie com refresh token inválido");
         }
     }
+
+    @Test
+    @DisplayName("Deveria remover o cookie de refresh diante de uma requisição de logout")
+    void shouldRemoveRefreshTokenOnLogout() throws Exception {
+        var usuario = this.getUser();
+        usuario.setAtivado(true);
+        this.usuarioRepository.save(usuario);
+
+        var result = this.mockMvc
+            .perform(post("/auth/logout")
+                .with(csrf())
+                .with(anonymous()))
+            .andExpect(MockMvcResultMatchers.status().isNoContent())
+            .andExpect(MockMvcResultMatchers.header().exists(HttpHeaders.SET_COOKIE))
+            .andReturn();
+
+        var responseCookie = result.getResponse().getCookie(this.authService.obterNomeDoCookie());
+        Assertions.assertNotNull(responseCookie, "Deveria ter um refresh cookie de remoção setado");
+        Assertions.assertNull(responseCookie.getValue(), "Deveria remover o cookie com refresh token inválido");
+    }
 }
