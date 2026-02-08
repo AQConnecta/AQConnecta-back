@@ -43,14 +43,6 @@ public class GlobalExceptionsHandler {
         return ResponseHandler.generateResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleUncaughtException(Exception ex) {
-        log.error("Erro não tratado: '{}'.", ex.getMessage(), ex);
-
-        return ResponseHandler.generateResponse("Houve um problema no nosso servidor. Tente novamente mais tarde.",
-            HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Object> handleValidationException(MethodArgumentNotValidException ex) {
         var errors = ex.getBindingResult()
@@ -70,5 +62,13 @@ public class GlobalExceptionsHandler {
             HttpStatus.BAD_REQUEST,
             errors
         );
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<?> handleUncaughtException(Exception ex) {
+        log.error("Erro não tratado: '{}'.", ex.getMessage(), ex);
+
+        return ResponseHandler.generateResponse("Houve um problema no nosso servidor. Tente novamente mais tarde.",
+            HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
