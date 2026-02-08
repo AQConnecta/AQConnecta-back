@@ -3,6 +3,8 @@ package com.aqConnecta.controller;
 import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.E2ETest;
 import com.aqConnecta.config.AWSClientConfig;
+import com.aqConnecta.factories.models.UsuarioFactory;
+import com.aqConnecta.factories.models.VagaFactory;
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.model.Vaga;
@@ -96,42 +98,23 @@ public class VagaControllerTest extends E2ETest {
             .orElseThrow(() -> new RuntimeException(
                 "Erro interno, não foi possivel criar conta com permissão de cliente")));
 
-        String email = "teste@mail.com";
-        String senha = "12345678";
-
-        var usuario = Usuario.builder()
-            .id(UUID.randomUUID())
+        var usuario = Usuario
+            .builder()
             .nome("John Doe")
-            .email(email)
-            .senha(this.passwordEncoder.encode(senha))
+            .email("teste@mail.com")
+            .senha(this.passwordEncoder.encode("12345678"))
             .permissao(permissoes)
             .deletado(deletado)
             .ativado(ativado)
             .build();
 
-        this.usuarioRepository.save(usuario);
+        usuario = this.usuarioRepository.save(usuario);
 
         return usuario;
     }
 
     private String generateToken(Usuario usuario) {
         return this.jwtUtil.generateToken(usuario.getEmail());
-    }
-
-    private static Vaga getValidVacancy(Usuario user) {
-        final var faker = new Faker();
-
-        return Vaga.builder()
-            .publicador(user)
-            .localDaVaga(faker.locality().localeString())
-            .titulo(faker.job().title())
-            .descricao(faker.job().keySkills())
-            .aceitaRemoto(faker.bool().bool())
-            .isIniciante(faker.bool().bool())
-            .atualizadoEm(faker.bool().bool()
-                ? LocalDateTime.ofInstant(faker.timeAndDate().future(), ZoneId.systemDefault())
-                : null)
-            .build();
     }
 
     private static VagaRequest getValidVacancyDto() {
@@ -377,7 +360,7 @@ public class VagaControllerTest extends E2ETest {
         final var faker = new Faker();
 
         for (var i = 0; i < disabledVacancies; i++) {
-            final var vacancy = getValidVacancy(user)
+            final var vacancy = VagaFactory.criar(user)
                 .toBuilder()
                 .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 5, TimeUnit.DAYS),
                     ZoneId.systemDefault()))
@@ -388,7 +371,7 @@ public class VagaControllerTest extends E2ETest {
         }
 
         for (var i = 0; i < enabledVacancies; i++) {
-            final var vacancy = getValidVacancy(user)
+            final var vacancy = VagaFactory.criar(user)
                 .toBuilder()
                 .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
                     ZoneId.systemDefault()))
@@ -401,7 +384,7 @@ public class VagaControllerTest extends E2ETest {
         }
 
         for (var i = 0; i < expiredVacancies; i++) {
-            final var vacancy = getValidVacancy(user)
+            final var vacancy = VagaFactory.criar(user)
                 .toBuilder()
                 .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
                     ZoneId.systemDefault()))
@@ -552,7 +535,7 @@ public class VagaControllerTest extends E2ETest {
         final var user = this.getUser(true, false);
         final var token = this.generateToken(user);
 
-        var vacancy = getValidVacancy(user);
+        var vacancy = VagaFactory.criar(user);
 
         vacancy = this.vagaRepository.save(vacancy);
 
@@ -592,7 +575,7 @@ public class VagaControllerTest extends E2ETest {
         var user = this.getUser(true, true);
         var token = this.generateToken(user);
 
-        final var vacancy = this.vagaRepository.save(getValidVacancy(user));
+        final var vacancy = this.vagaRepository.save(VagaFactory.criar(user));
 
         this.mockMvc
             .perform(get("/vaga/localizar/{id}", vacancy.getId().toString())
@@ -616,7 +599,7 @@ public class VagaControllerTest extends E2ETest {
         var user = this.getUser(false, false);
         var token = this.generateToken(user);
 
-        final var vacancy = this.vagaRepository.save(getValidVacancy(user));
+        final var vacancy = this.vagaRepository.save(VagaFactory.criar(user));
 
         this.mockMvc
             .perform(get("/vaga/localizar/{id}", vacancy.getId().toString())
@@ -632,7 +615,8 @@ public class VagaControllerTest extends E2ETest {
         var user = this.getUser(false, false);
         var token = this.generateToken(user);
 
-        var vacancy = getValidVacancy(user).toBuilder().deletadoEm(LocalDateTime.now()).build();
+        var vacancy = VagaFactory.criar(user);
+        vacancy.setDeletadoEm(LocalDateTime.now());
         vacancy = this.vagaRepository.save(vacancy);
 
         this.mockMvc
@@ -643,14 +627,14 @@ public class VagaControllerTest extends E2ETest {
             .andExpect(jsonPath("$.data").doesNotExist());
     }
 
-
     @Test
     @DisplayName("[GET /vaga/localizar/{id}] Um usuário deveria poder ver uma vaga expirada se esta foi buscada especificamente")
     void shouldDisplayExpiredVacancyToUser() throws Exception {
         var user = this.getUser(false, false);
         var token = this.generateToken(user);
 
-        var vacancy = getValidVacancy(user).toBuilder().dataLimiteCandidatura(LocalDateTime.now().minusDays(2)).build();
+        var vacancy = VagaFactory.criar(user);
+        vacancy.setDataLimiteCandidatura(LocalDateTime.now().minusDays(2));
         vacancy = this.vagaRepository.save(vacancy);
 
         this.mockMvc
@@ -659,5 +643,90 @@ public class VagaControllerTest extends E2ETest {
                 .with(csrf()))
             .andExpect(MockMvcResultMatchers.status().isOk())
             .andExpect(jsonPath("$.data").exists());
+    }
+
+    private Stream<Arguments> usersThatCanDelete() {
+        final var list = new ArrayList<Arguments>();
+
+        final var authorUser = UsuarioFactory.criar();
+        authorUser.setAtivado(true);
+
+        {
+            final var vacancy = VagaFactory.criar(authorUser);
+            list.add(Arguments.of("for o autor", authorUser, vacancy));
+        }
+        {
+            final var permissions = new HashSet<Permissao>();
+            permissions.add(new Permissao(2, Permissao.ROLE_ADMIN));
+
+            var adminUser = UsuarioFactory
+                .criar()
+                .toBuilder()
+                .ativado(true)
+                .permissao(permissions)
+                .build();
+
+            final var vacancy = VagaFactory.criar(authorUser);
+            list.add(Arguments.of("for um administrador", adminUser, vacancy));
+        }
+
+        return list.stream();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("usersThatCanDelete")
+    @DisplayName("[DELETE /vaga/deletar/{id}] Deveria deletar a vaga se o usuário")
+    void shouldAllowUserToDeleteVacancy(String _case, Usuario currentUser, Vaga vacancy) throws Exception {
+        currentUser = this.usuarioRepository.save(currentUser);
+
+        if (!vacancy.getPublicador().getId().equals(currentUser.getId())) {
+            this.usuarioRepository.save(vacancy.getPublicador());
+        }
+
+        vacancy = this.vagaRepository.save(vacancy);
+
+        final var token = this.generateToken(currentUser);
+
+        this.mockMvc
+            .perform(delete("/vaga/deletar/{id}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk());
+
+        assertEquals(0, this.vagaRepository.findAll().size());
+    }
+
+    @Test
+    @DisplayName("[DELETE /vaga/deletar/{id}] Não deveria deixar um usuário sem e-mail confirmado deletar uma vaga")
+    void shouldNotLetDeleteVacancyIfEmailIsntConfirmed() throws Exception {
+        final var user = this.usuarioRepository.save(UsuarioFactory.criar().toBuilder().ativado(false).build());
+        final var token = this.generateToken(user);
+        final var vacancy = this.vagaRepository.save(VagaFactory.criar(user));
+
+        this.mockMvc
+            .perform(delete("/vaga/deletar/{id}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isForbidden());
+
+        assertEquals(1, this.vagaRepository.findAll().size());
+    }
+
+    @Test
+    @DisplayName("[DELETE /vaga/deletar{id}] Não deveria deixar um usuário deletar uma vaga se ele não é o autor nem um administrador")
+    void shouldNotDeleteVacancyIfUserIsNotAdminNorAuthor() throws Exception {
+        final var user1 = this.getUser(false, false);
+        final var user2 = this.usuarioRepository.save(UsuarioFactory.criar());
+
+        final var vacancy = this.vagaRepository.save(VagaFactory.criar(user1));
+        final var unauthorizedUserToken = this.generateToken(user2);
+
+        this.mockMvc
+            .perform(delete("/vaga/deletar/{id}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + unauthorizedUserToken)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isForbidden());
+
+        assertEquals(1, this.vagaRepository.findAll().size());
     }
 }
