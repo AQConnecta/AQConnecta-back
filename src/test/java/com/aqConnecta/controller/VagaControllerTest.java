@@ -15,7 +15,8 @@ import com.aqConnecta.service.DocumentoService;
 import com.aqConnecta.service.EmailService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
-import org.junit.jupiter.api.Assertions;
+import net.datafaker.Faker;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,14 +35,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.UUID;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 
 @ActiveProfiles("test")
@@ -167,13 +172,13 @@ public class VagaControllerTest extends E2ETest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .with(csrf()))
             .andExpect(MockMvcResultMatchers.status().isCreated())
-            .andExpect(MockMvcResultMatchers.jsonPath("$.message").exists())
-            .andExpect(MockMvcResultMatchers.jsonPath("$.data").exists())
-            .andExpect(MockMvcResultMatchers.jsonPath("$.data.titulo").value(reqDto.getTitulo()))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.data.descricao").value(reqDto.getDescricao()))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.data.localDaVaga").value(reqDto.getLocalDaVaga()))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.data.aceitaRemoto").value(reqDto.isAceitaRemoto()))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.data.id").exists())
+            .andExpect(jsonPath("$.message").exists())
+            .andExpect(jsonPath("$.data").exists())
+            .andExpect(jsonPath("$.data.titulo").value(reqDto.getTitulo()))
+            .andExpect(jsonPath("$.data.descricao").value(reqDto.getDescricao()))
+            .andExpect(jsonPath("$.data.localDaVaga").value(reqDto.getLocalDaVaga()))
+            .andExpect(jsonPath("$.data.aceitaRemoto").value(reqDto.isAceitaRemoto()))
+            .andExpect(jsonPath("$.data.id").exists())
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -182,13 +187,13 @@ public class VagaControllerTest extends E2ETest {
 
         var vacancies = this.vagaRepository.findAll();
 
-        Assertions.assertEquals(1, vacancies.size());
-        Assertions.assertEquals(vacancyId, vacancies.getFirst().getId());
-        Assertions.assertEquals(reqDto.getTitulo(), vacancies.getFirst().getTitulo());
-        Assertions.assertEquals(user.getId(), vacancies.getFirst().getPublicador().getId());
+        assertEquals(1, vacancies.size());
+        assertEquals(vacancyId, vacancies.getFirst().getId());
+        assertEquals(reqDto.getTitulo(), vacancies.getFirst().getTitulo());
+        assertEquals(user.getId(), vacancies.getFirst().getPublicador().getId());
 
-        Assertions.assertNull(vacancies.getFirst().getDeletadoEm(), "Vagas recém-criadas não deveriam estar deletadas");
-        Assertions.assertNull(vacancies.getFirst().getAtualizadoEm(),
+        assertNull(vacancies.getFirst().getDeletadoEm(), "Vagas recém-criadas não deveriam estar deletadas");
+        assertNull(vacancies.getFirst().getAtualizadoEm(),
             "Vagas recém-criadas não devem já terem data de última atualização");
     }
 
@@ -210,7 +215,7 @@ public class VagaControllerTest extends E2ETest {
             .andExpect(MockMvcResultMatchers.status().isBadRequest());
 
         var vacancies = this.vagaRepository.findAll();
-        Assertions.assertEquals(0, vacancies.size());
+        assertEquals(0, vacancies.size());
     }
 
     @Test
@@ -228,7 +233,7 @@ public class VagaControllerTest extends E2ETest {
                 .with(csrf()))
             .andExpect(MockMvcResultMatchers.status().isForbidden());
 
-        Assertions.assertEquals(0, this.vagaRepository.findAll().size());
+        assertEquals(0, this.vagaRepository.findAll().size());
     }
 
     @Test
@@ -246,7 +251,7 @@ public class VagaControllerTest extends E2ETest {
                 .with(csrf()))
             .andExpect(MockMvcResultMatchers.status().isForbidden());
 
-        Assertions.assertEquals(0, this.vagaRepository.findAll().size());
+        assertEquals(0, this.vagaRepository.findAll().size());
     }
 
     @Test
@@ -262,7 +267,7 @@ public class VagaControllerTest extends E2ETest {
                 .with(anonymous()))
             .andExpect(MockMvcResultMatchers.status().isUnauthorized());
 
-        Assertions.assertEquals(0, this.vagaRepository.findAll().size());
+        assertEquals(0, this.vagaRepository.findAll().size());
     }
 
     @Test
@@ -303,16 +308,16 @@ public class VagaControllerTest extends E2ETest {
             .andExpect(MockMvcResultMatchers.status().isOk());
 
         final var vacancies = this.vagaRepository.findAll();
-        Assertions.assertEquals(1, vacancies.size());
+        assertEquals(1, vacancies.size());
 
         final var savedVacancy = vacancies.get(0);
-        Assertions.assertEquals(originalVacancy.getId(), savedVacancy.getId());
-        Assertions.assertEquals(reqDto.getTitulo(), savedVacancy.getTitulo());
-        Assertions.assertEquals(reqDto.getDescricao(), savedVacancy.getDescricao());
-        Assertions.assertEquals(reqDto.getLocalDaVaga(), savedVacancy.getLocalDaVaga());
-        Assertions.assertEquals(reqDto.isIniciante(), savedVacancy.isIniciante());
-        Assertions.assertEquals(reqDto.isAceitaRemoto(), savedVacancy.isAceitaRemoto());
-        Assertions.assertEquals(reqDto.getDataLimiteCandidatura(), savedVacancy.getDataLimiteCandidatura());
+        assertEquals(originalVacancy.getId(), savedVacancy.getId());
+        assertEquals(reqDto.getTitulo(), savedVacancy.getTitulo());
+        assertEquals(reqDto.getDescricao(), savedVacancy.getDescricao());
+        assertEquals(reqDto.getLocalDaVaga(), savedVacancy.getLocalDaVaga());
+        assertEquals(reqDto.isIniciante(), savedVacancy.isIniciante());
+        assertEquals(reqDto.isAceitaRemoto(), savedVacancy.isAceitaRemoto());
+        assertEquals(reqDto.getDataLimiteCandidatura(), savedVacancy.getDataLimiteCandidatura());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -346,9 +351,190 @@ public class VagaControllerTest extends E2ETest {
 
         final var savedVacancy = this.vagaRepository.findById(originalVacancy.getId()).orElseThrow();
 
-        Assertions.assertNotEquals(invalidDto.getTitulo(), savedVacancy.getTitulo());
-        Assertions.assertNotEquals(invalidDto.getDescricao(), savedVacancy.getDescricao());
-        Assertions.assertNotEquals(invalidDto.getLocalDaVaga(), savedVacancy.getLocalDaVaga());
-        Assertions.assertNotEquals(invalidDto.getDataLimiteCandidatura(), savedVacancy.getDataLimiteCandidatura());
+        assertNotEquals(invalidDto.getTitulo(), savedVacancy.getTitulo());
+        assertNotEquals(invalidDto.getDescricao(), savedVacancy.getDescricao());
+        assertNotEquals(invalidDto.getLocalDaVaga(), savedVacancy.getLocalDaVaga());
+        assertNotEquals(invalidDto.getDataLimiteCandidatura(), savedVacancy.getDataLimiteCandidatura());
+    }
+
+    private void insertVacancies(Usuario user, int disabledVacancies, int enabledVacancies, int expiredVacancies) {
+        final var vacancies = new ArrayList<Vaga>();
+        final var faker = new Faker();
+
+        final Supplier<Vaga.VagaBuilder> getVacancyBuilder = () -> Vaga.builder().publicador(user)
+            .localDaVaga(faker.locality().localeString())
+            .titulo(faker.job().position())
+            .descricao(faker.job().title())
+            .aceitaRemoto(faker.bool().bool())
+            .isIniciante(faker.bool().bool())
+            .atualizadoEm(faker.bool().bool()
+                ? LocalDateTime.ofInstant(faker.timeAndDate().future(), ZoneId.systemDefault())
+                : null);
+
+        for (var i = 0; i < disabledVacancies; i++) {
+            final var vacancy = getVacancyBuilder.get()
+                .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 5, TimeUnit.DAYS),
+                    ZoneId.systemDefault()))
+                .deletadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(3, TimeUnit.DAYS), ZoneId.systemDefault()))
+                .build();
+
+            vacancies.add(vacancy);
+        }
+
+        for (var i = 0; i < enabledVacancies; i++) {
+            final var vacancy = getVacancyBuilder.get()
+                .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
+                    ZoneId.systemDefault()))
+                .dataLimiteCandidatura(faker.bool().bool()
+                    ? LocalDateTime.ofInstant(faker.timeAndDate().future(20, TimeUnit.DAYS), ZoneId.systemDefault())
+                    : null)
+                .build();
+
+            vacancies.add(vacancy);
+        }
+
+        for (var i = 0; i < expiredVacancies; i++) {
+            final var vacancy = getVacancyBuilder.get()
+                .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
+                    ZoneId.systemDefault()))
+                .dataLimiteCandidatura(LocalDateTime.ofInstant(faker.timeAndDate().past(3, TimeUnit.DAYS),
+                    ZoneId.systemDefault()))
+                .build();
+
+            vacancies.add(vacancy);
+        }
+
+        vacancies.forEach(vaga -> this.vagaRepository.save(vaga));
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/listar] Deveria listar as vagas")
+    void shouldListVacancies() throws Exception {
+        var user = this.getUser();
+        var token = this.generateToken(user);
+
+        this.insertVacancies(user, 0, 5, 0);
+        assertEquals(5, this.vagaRepository.findAll().size());
+
+        this.mockMvc
+            .perform(get("/vaga/listar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data", Matchers.hasSize(5)));
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/listar] Não deveria listar vagas apagadas")
+    void shouldNotListSoftDeletedVacancies() throws Exception {
+        var user = this.getUser();
+        var token = this.generateToken(user);
+
+        this.insertVacancies(user, 3, 2, 0);
+        assertEquals(5, this.vagaRepository.findAll().size());
+
+        var body = this.mockMvc
+            .perform(get("/vaga/listar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data", Matchers.hasSize(2)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        List<Map<String, Object>> data = JsonPath.read(body, "$.data");
+
+        var responseVacancies =
+            data.stream()
+                .map(record -> record.get("id").toString())
+                .map(UUID::fromString)
+                .map(id -> this.vagaRepository.findById(id).orElseThrow())
+                .toList();
+
+        assertThat(responseVacancies).allSatisfy(vacancy -> assertNull(vacancy.getDeletadoEm()));
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/listar] Não deveria listar vagas expiradas")
+    void shouldNotListExpiredVacancies() throws Exception {
+        var user = this.getUser();
+        var token = this.generateToken(user);
+
+        final var disabledVacancies = 5;
+        final var enabledVacancies = 10;
+        final var expiredVacancies = 5;
+        this.insertVacancies(user, disabledVacancies, enabledVacancies, expiredVacancies);
+        assertEquals(disabledVacancies + enabledVacancies + expiredVacancies, this.vagaRepository.findAll().size());
+
+        var body = this.mockMvc
+            .perform(get("/vaga/listar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data", Matchers.hasSize(enabledVacancies)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        List<Map<String, Object>> data = JsonPath.read(body, "$.data");
+
+        var vacancies =
+            data.stream()
+                .map(record -> record.get("id").toString())
+                .map(UUID::fromString)
+                .map(id -> this.vagaRepository.findById(id).orElseThrow())
+                .toList();
+
+        final var now = LocalDateTime.now();
+        assertThat(vacancies).allSatisfy(vacancy -> assertTrue(
+            vacancy.getDataLimiteCandidatura() == null || vacancy.getDataLimiteCandidatura().isAfter(now)));
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/listar] Um usuário anônimo não deveria poder visualizar listagem de vagas")
+    void shouldNotListVacanciesToAnonymousNorDisabledUsers() throws Exception {
+        var user = this.getUser(true, true);
+        var token = this.generateToken(user);
+
+        this.mockMvc
+            .perform(get("/vaga/listar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isUnauthorized())
+            .andExpect(jsonPath("$.data").doesNotExist());
+
+        this.mockMvc
+            .perform(get("/vaga/listar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf())
+                .with(anonymous()))
+            .andExpect(MockMvcResultMatchers.status().isUnauthorized())
+            .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/listar] Um usuário habilitado deveria poder visualizar listagem de vagas mesmo sem confirmar o e-mail")
+    void shouldListVacanciesToEnabledButUnconfirmedUsers() throws Exception {
+        var user = this.getUser(false, false);
+        var token = this.generateToken(user);
+
+        this.mockMvc
+            .perform(get("/vaga/listar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists());
     }
 }

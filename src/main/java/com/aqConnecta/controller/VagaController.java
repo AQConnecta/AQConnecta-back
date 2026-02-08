@@ -2,7 +2,9 @@ package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
+import com.aqConnecta.exception.base.NaoAutorizadoException;
 import com.aqConnecta.exception.base.RecursoNaoEncontradoException;
+import com.aqConnecta.exception.usuarios.UsuarioNaoVerificadoException;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.security.AuthUser;
 import com.aqConnecta.security.RequireAuth;
@@ -13,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -44,6 +47,16 @@ public class VagaController {
         @RequestParam(value = "idCompetencia", required = false) UUID idCompetencia,
         @RequestParam(value = "iniciante", required = false) Boolean iniciante
     ) {
+        try {
+            var authentication = SecurityContextHolder.getContext().getAuthentication();
+            var _usuario = this.usuarioService.obterDaAutenticacao(authentication);
+        }
+        catch (UsuarioNaoVerificadoException ignored) {
+        }
+        catch (Exception e) {
+            throw new NaoAutorizadoException("Você não tem permissão para visualizar as vagas.");
+        }
+
         return service.listarVagas(titulo, idCompetencia, iniciante);
     }
 
