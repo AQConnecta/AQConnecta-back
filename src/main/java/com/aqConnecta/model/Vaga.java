@@ -44,26 +44,28 @@ public class Vaga implements Serializable {
     @Column(name = "DATA_LIMITE")
     private LocalDateTime dataLimiteCandidatura;
     @Column(name = "CRIADO_EM")
-    private LocalDateTime criadoEm;
+    @Builder.Default
+    private LocalDateTime criadoEm = LocalDateTime.now();
     @Column(name = "ATUALIZADO_EM")
-    private LocalDateTime atualizadoEm;
+    @Builder.Default
+    private LocalDateTime atualizadoEm = null;
     @Column(name = "DELETADO_EM")
-    private LocalDateTime deletadoEm;
+    @Builder.Default
+    private LocalDateTime deletadoEm = null;
     @Column(name = "IS_INICIANTE")
     private boolean isIniciante;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-            name = "RL_VAGA_COMPETENCIA",
-            joinColumns = @JoinColumn(name = "ID_VAGA", referencedColumnName = "ID"),
-            inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
+        name = "RL_VAGA_COMPETENCIA",
+        joinColumns = @JoinColumn(name = "ID_VAGA", referencedColumnName = "ID"),
+        inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
     )
     private Set<Competencia> competencias = new HashSet<>();
 
     @OneToMany(mappedBy = "vaga", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JsonBackReference
     private Set<Candidatura> candidaturas = new HashSet<>();
-
 
 
 }

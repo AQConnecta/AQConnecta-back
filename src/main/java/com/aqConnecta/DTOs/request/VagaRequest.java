@@ -1,10 +1,12 @@
 package com.aqConnecta.DTOs.request;
 
-import com.aqConnecta.model.Usuario;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -12,14 +14,23 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class VagaRequest {
-    private UUID id;
-    private Usuario publicador;
+    @NotBlank(message = "A vaga precisa de um título.")
     private String titulo;
+
+    @NotBlank(message = "A vaga precisa de uma descrição.")
+    @Max(value = 200, message = "A descrição não pode ultrapassar 200 caracteres.")
     private String descricao;
+
+    @NotBlank(message = "Insira o local da vaga.")
     private String localDaVaga;
+
+    @NotNull
     private boolean aceitaRemoto;
+
+    @NotNull
+    @Future
     private LocalDateTime dataLimiteCandidatura;
-    private LocalDateTime criadoEm;
-    private LocalDateTime atualizadoEm;
+
+    @NotNull
     private boolean isIniciante;
 }

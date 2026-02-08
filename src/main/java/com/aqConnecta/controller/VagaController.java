@@ -8,6 +8,7 @@ import com.aqConnecta.security.AuthUser;
 import com.aqConnecta.security.RequireAuth;
 import com.aqConnecta.service.UsuarioService;
 import com.aqConnecta.service.VagaService;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,9 @@ public class VagaController {
     }
 
     @PostMapping("/cadastrar")
-    public ResponseEntity<Object> cadastrarVaga(@RequestBody VagaRequest vagaRequest, @AuthUser Usuario usuario) {
+    public ResponseEntity<Object> cadastrarVaga(
+        @Valid @RequestBody VagaRequest vagaRequest,
+        @AuthUser Usuario usuario) {
         return service.cadastrarVaga(vagaRequest, usuario);
     }
 
@@ -65,7 +68,7 @@ public class VagaController {
 
     @PutMapping("/alterar/{idVaga}")
     public ResponseEntity<Object> alterarVaga(@PathVariable UUID idVaga,
-        @RequestBody VagaRequest vagaRequest,
+        @Valid @RequestBody VagaRequest vagaRequest,
         @AuthUser Usuario usuario) {
         return service.alterarVaga(idVaga, vagaRequest, usuario);
     }

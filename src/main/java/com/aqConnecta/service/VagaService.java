@@ -38,20 +38,17 @@ public class VagaService {
 
     public ResponseEntity<Object> cadastrarVaga(VagaRequest registro, Usuario usuario) {
         Vaga vaga = Vaga.builder()
-            .id(UUID.randomUUID())
             .publicador(usuario)
             .titulo(registro.getTitulo())
             .descricao(registro.getDescricao())
             .localDaVaga(registro.getLocalDaVaga())
             .aceitaRemoto(registro.isAceitaRemoto())
             .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
-            .criadoEm(registro.getCriadoEm())
-            .atualizadoEm(registro.getAtualizadoEm())
             .isIniciante(registro.isIniciante())
             .build();
 
-        vagaRepository.save(vaga);
-        return ResponseHandler.generateResponse("Vaga cadastrada com súcesso!", HttpStatus.CREATED, vaga);
+        vaga = vagaRepository.save(vaga);
+        return ResponseHandler.generateResponse("Vaga cadastrada com sucesso!", HttpStatus.CREATED, vaga);
     }
 
     public List<VagaResponse> fillVagaResponse(@NonNull List<Vaga> vagas) {
@@ -147,8 +144,7 @@ public class VagaService {
                 .localDaVaga(registro.getLocalDaVaga())
                 .aceitaRemoto(registro.isAceitaRemoto())
                 .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
-                .criadoEm(registro.getCriadoEm())
-                .atualizadoEm(registro.getAtualizadoEm())
+                .atualizadoEm(LocalDateTime.now())
                 .isIniciante(registro.isIniciante())
                 .build();
             vagaRepository.save(vagaAlterada);
