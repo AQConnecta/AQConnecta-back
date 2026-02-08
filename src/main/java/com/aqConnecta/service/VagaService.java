@@ -148,7 +148,7 @@ public class VagaService {
                 .isIniciante(registro.isIniciante())
                 .build();
             vagaRepository.save(vagaAlterada);
-            return ResponseHandler.generateResponse("Vaga atualizada com súcesso!", HttpStatus.CREATED, vaga);
+            return ResponseHandler.generateResponse("Vaga atualizada com súcesso!", HttpStatus.OK, vaga);
         }
         return ResponseHandler.generateResponse("Erro ao encontrar a vaga!", HttpStatus.NOT_FOUND);
     }
