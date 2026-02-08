@@ -23,8 +23,7 @@ public abstract class E2ETest {
     protected JdbcTemplate jdbcTemplate;
 
     @ServiceConnection
-    final static protected MariaDBContainer<?> databaseContainer =
-        new MariaDBContainer<>("mariadb:10.10").withReuse(true);
+    final static protected MariaDBContainer<?> databaseContainer = new MariaDBContainer<>("mariadb:10.10");
 
     static {
         databaseContainer.start();
