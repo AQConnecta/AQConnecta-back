@@ -1,6 +1,8 @@
 package com.aqConnecta.exception.usuarios;
 
-public class UsuarioNaoVerificadoException extends RuntimeException {
+import com.aqConnecta.exception.base.AcaoProibidaException;
+
+public class UsuarioNaoVerificadoException extends AcaoProibidaException {
     private static String formatErrorMessage(String email) {
         return "Usuário não foi ativado, verifique seu email: " + email;
     }
