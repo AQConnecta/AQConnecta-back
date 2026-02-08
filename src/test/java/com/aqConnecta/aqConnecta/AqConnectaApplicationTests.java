@@ -9,6 +9,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 @SpringBootTest
 class AqConnectaApplicationTests extends E2ETest {
     @MockBean
+    @SuppressWarnings("unused")
     private EmailService emailService;
 
     @Test

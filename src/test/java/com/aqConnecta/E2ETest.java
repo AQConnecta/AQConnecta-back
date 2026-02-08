@@ -36,7 +36,7 @@ public abstract class E2ETest {
     }
 
     @BeforeEach
-    void cleanUp() throws Exception {
+    void cleanUp() {
         jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
 
         jdbcTemplate.execute("TRUNCATE TABLE RL_USUARIO_CURRICULO");

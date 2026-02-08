@@ -13,11 +13,11 @@ import com.aqConnecta.model.Usuario;
 import com.aqConnecta.model.Vaga;
 import com.aqConnecta.repository.*;
 import com.aqConnecta.security.JWTUtil;
-import com.aqConnecta.service.AuthService;
 import com.aqConnecta.service.DocumentoService;
 import com.aqConnecta.service.EmailService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import lombok.AllArgsConstructor;
 import net.datafaker.Faker;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,6 +33,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestConstructor;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
@@ -55,44 +55,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
+@AllArgsConstructor
 public class VagaControllerTest extends E2ETest {
 
-    @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
     private PermissaoRepository permissaoRepository;
-
-    @Autowired
     private UsuarioRepository usuarioRepository;
-
-    @Autowired
     private CurriculoRepository curriculoRepository;
-
-    @Autowired
     private CandidaturaRepository candidaturaRepository;
-
-    @Autowired
     private VagaRepository vagaRepository;
-
-    @Autowired
     private JWTUtil jwtUtil;
-
-    @Autowired
-    private AuthService authService;
 
     // Mockamos esses para não interagirem com nada externo
     @MockBean
+    @SuppressWarnings("unused")
     private EmailService emailService;
     @MockBean
+    @SuppressWarnings("unused")
     private DocumentoService documentoService;
     @MockBean
+    @SuppressWarnings("unused")
     private AWSClientConfig awsClientConfig;
 
     private Usuario getUser() {
@@ -797,7 +782,7 @@ public class VagaControllerTest extends E2ETest {
         for (var i = 0; i < totalCandidatures; i++) {
             final var candidate = this.usuarioRepository.save(UsuarioFactory.criarAtivado());
             final var draftCandidature = CandidaturaFactory.criar(candidate, vacancy);
-            final var curriculum = this.curriculoRepository.save(CurriculoFactory
+            this.curriculoRepository.save(CurriculoFactory
                 .criar(candidate)
                 .toBuilder()
                 .curriculo(draftCandidature.getCurriculoUrl())
@@ -820,10 +805,9 @@ public class VagaControllerTest extends E2ETest {
             .andExpect(jsonPath("$.data", Matchers.hasSize(totalCandidatures)));
     }
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("usersThatCanSeeVacancy")
+    @Test()
     @DisplayName("[GET /vaga/candidaturas/{idVaga}] Não deveria mostrar os candidatos de uma vaga para nenhum outro usuário comum")
-    void shouldNotShowCandidaturesToAnyOtherCommonUser(String _case, boolean isAuthor) throws Exception {
+    void shouldNotShowCandidaturesToAnyOtherCommonUser() throws Exception {
         final var author = this.usuarioRepository.save(UsuarioFactory.criarAtivado());
         final var vacancy = this.vagaRepository.save(VagaFactory.criar(author));
 
