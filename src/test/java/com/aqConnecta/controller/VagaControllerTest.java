@@ -38,7 +38,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -117,6 +116,22 @@ public class VagaControllerTest extends E2ETest {
 
     private String generateToken(Usuario usuario) {
         return this.jwtUtil.generateToken(usuario.getEmail());
+    }
+
+    private static Vaga getValidVacancy(Usuario user) {
+        final var faker = new Faker();
+
+        return Vaga.builder()
+            .publicador(user)
+            .localDaVaga(faker.locality().localeString())
+            .titulo(faker.job().title())
+            .descricao(faker.job().keySkills())
+            .aceitaRemoto(faker.bool().bool())
+            .isIniciante(faker.bool().bool())
+            .atualizadoEm(faker.bool().bool()
+                ? LocalDateTime.ofInstant(faker.timeAndDate().future(), ZoneId.systemDefault())
+                : null)
+            .build();
     }
 
     private static VagaRequest getValidVacancyDto() {
@@ -310,7 +325,7 @@ public class VagaControllerTest extends E2ETest {
         final var vacancies = this.vagaRepository.findAll();
         assertEquals(1, vacancies.size());
 
-        final var savedVacancy = vacancies.get(0);
+        final var savedVacancy = vacancies.getFirst();
         assertEquals(originalVacancy.getId(), savedVacancy.getId());
         assertEquals(reqDto.getTitulo(), savedVacancy.getTitulo());
         assertEquals(reqDto.getDescricao(), savedVacancy.getDescricao());
@@ -361,18 +376,9 @@ public class VagaControllerTest extends E2ETest {
         final var vacancies = new ArrayList<Vaga>();
         final var faker = new Faker();
 
-        final Supplier<Vaga.VagaBuilder> getVacancyBuilder = () -> Vaga.builder().publicador(user)
-            .localDaVaga(faker.locality().localeString())
-            .titulo(faker.job().position())
-            .descricao(faker.job().title())
-            .aceitaRemoto(faker.bool().bool())
-            .isIniciante(faker.bool().bool())
-            .atualizadoEm(faker.bool().bool()
-                ? LocalDateTime.ofInstant(faker.timeAndDate().future(), ZoneId.systemDefault())
-                : null);
-
         for (var i = 0; i < disabledVacancies; i++) {
-            final var vacancy = getVacancyBuilder.get()
+            final var vacancy = getValidVacancy(user)
+                .toBuilder()
                 .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 5, TimeUnit.DAYS),
                     ZoneId.systemDefault()))
                 .deletadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(3, TimeUnit.DAYS), ZoneId.systemDefault()))
@@ -382,7 +388,8 @@ public class VagaControllerTest extends E2ETest {
         }
 
         for (var i = 0; i < enabledVacancies; i++) {
-            final var vacancy = getVacancyBuilder.get()
+            final var vacancy = getValidVacancy(user)
+                .toBuilder()
                 .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
                     ZoneId.systemDefault()))
                 .dataLimiteCandidatura(faker.bool().bool()
@@ -394,7 +401,8 @@ public class VagaControllerTest extends E2ETest {
         }
 
         for (var i = 0; i < expiredVacancies; i++) {
-            final var vacancy = getVacancyBuilder.get()
+            final var vacancy = getValidVacancy(user)
+                .toBuilder()
                 .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
                     ZoneId.systemDefault()))
                 .dataLimiteCandidatura(LocalDateTime.ofInstant(faker.timeAndDate().past(3, TimeUnit.DAYS),
@@ -533,6 +541,121 @@ public class VagaControllerTest extends E2ETest {
             .perform(get("/vaga/listar")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists());
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/localizar/{id}] Deveria encontrar uma vaga existente pelo seu ID")
+    void shouldFindVacancyById() throws Exception {
+        final var user = this.getUser(true, false);
+        final var token = this.generateToken(user);
+
+        var vacancy = getValidVacancy(user);
+
+        vacancy = this.vagaRepository.save(vacancy);
+
+        this.mockMvc
+            .perform(get("/vaga/localizar/{id}", vacancy.getId())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists())
+            .andExpect(jsonPath("$.data.id").value(vacancy.getId().toString()))
+            .andExpect(jsonPath("$.data.titulo").value(vacancy.getTitulo()))
+            .andExpect(jsonPath("$.data.descricao").value(vacancy.getDescricao()))
+            .andExpect(jsonPath("$.data.localDaVaga").value(vacancy.getLocalDaVaga()))
+            .andExpect(jsonPath("$.data.aceitaRemoto").value(vacancy.isAceitaRemoto()))
+            .andExpect(jsonPath("$.data.iniciante").value(vacancy.isIniciante()))
+            .andExpect(jsonPath("$.data.publicador.id").value(vacancy.getPublicador().getId().toString()))
+            .andExpect(jsonPath("$.data.publicador.nome").value(vacancy.getPublicador().getNome()));
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/localizar/{id}] A busca por uma vaga inexistente deveria resultar em um erro NOT_FOUND")
+    void shouldReturnNotFoundUponFindingUnexistingVacancy() throws Exception {
+        final var user = this.getUser(false, false);
+        final var token = this.generateToken(user);
+
+        this.mockMvc
+            .perform(get("/vaga/localizar/{id}", UUID.randomUUID())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isNotFound())
+            .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/localizar/{id}] Usuários anônimos e/ou deletados não deveriam poder visualizar uma vaga")
+    void shouldNotDisplayVacancyToAnonymousOrDisabledUsers() throws Exception {
+        var user = this.getUser(true, true);
+        var token = this.generateToken(user);
+
+        final var vacancy = this.vagaRepository.save(getValidVacancy(user));
+
+        this.mockMvc
+            .perform(get("/vaga/localizar/{id}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isUnauthorized())
+            .andExpect(jsonPath("$.data").doesNotExist());
+
+        this.mockMvc
+            .perform(get("/vaga/localizar/{id}", vacancy.getId().toString())
+                .with(csrf())
+                .with(anonymous()))
+            .andExpect(MockMvcResultMatchers.status().isUnauthorized())
+            .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+
+    @Test
+    @DisplayName("[GET /vaga/localizar/{id}] Usuários registrados deveriam poder visualizar uma vaga mesmo sem ter confirmado seu e-mail")
+    void shouldDisplayVacancyToEnabledButUnconfirmedUser() throws Exception {
+        var user = this.getUser(false, false);
+        var token = this.generateToken(user);
+
+        final var vacancy = this.vagaRepository.save(getValidVacancy(user));
+
+        this.mockMvc
+            .perform(get("/vaga/localizar/{id}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists());
+    }
+
+    @Test
+    @DisplayName("[GET /vaga/localizar/{id}] Um usuário não deveria poder visualizar uma vaga excluída")
+    void shouldNotDisplayDisabledVacancyToUser() throws Exception {
+        var user = this.getUser(false, false);
+        var token = this.generateToken(user);
+
+        var vacancy = getValidVacancy(user).toBuilder().deletadoEm(LocalDateTime.now()).build();
+        vacancy = this.vagaRepository.save(vacancy);
+
+        this.mockMvc
+            .perform(get("/vaga/localizar/{id}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isNotFound())
+            .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+
+    @Test
+    @DisplayName("[GET /vaga/localizar/{id}] Um usuário deveria poder ver uma vaga expirada se esta foi buscada especificamente")
+    void shouldDisplayExpiredVacancyToUser() throws Exception {
+        var user = this.getUser(false, false);
+        var token = this.generateToken(user);
+
+        var vacancy = getValidVacancy(user).toBuilder().dataLimiteCandidatura(LocalDateTime.now().minusDays(2)).build();
+        vacancy = this.vagaRepository.save(vacancy);
+
+        this.mockMvc
+            .perform(get("/vaga/localizar/{id}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .with(csrf()))
             .andExpect(MockMvcResultMatchers.status().isOk())
             .andExpect(jsonPath("$.data").exists());

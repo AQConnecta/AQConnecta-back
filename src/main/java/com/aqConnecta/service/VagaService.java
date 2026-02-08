@@ -4,7 +4,10 @@ import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.DTOs.response.VagaResponse;
 import com.aqConnecta.exception.base.AcaoProibidaException;
+import com.aqConnecta.exception.base.NaoAutorizadoException;
 import com.aqConnecta.exception.base.RecursoNaoEncontradoException;
+import com.aqConnecta.exception.usuarios.UsuarioNaoVerificadoException;
+import com.aqConnecta.exception.usuarios.UsuarioRemovidoException;
 import com.aqConnecta.model.Candidatura;
 import com.aqConnecta.model.Curriculo;
 import com.aqConnecta.model.Usuario;
@@ -18,8 +21,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,8 +38,28 @@ public class VagaService {
 
     @Autowired
     private CandidaturaRepository candidaturaRepository;
+
     @Autowired
     private CurriculoRepository curriculoRepository;
+
+    @Autowired
+    private UsuarioService usuarioService;
+
+    /**
+     * Assegura que o usuário da requisição está logado e é um usuário ativo no sistema, com
+     * e-mail confirmado ou não.
+     */
+    private void assegurarQueUsuarioEstaAtivo() throws NaoAutorizadoException {
+        try {
+            var authentication = SecurityContextHolder.getContext().getAuthentication();
+            var _usuario = this.usuarioService.obterDaAutenticacao(authentication);
+        }
+        catch (UsuarioNaoVerificadoException ignored) {
+        }
+        catch (UsuarioRemovidoException e) {
+            throw new NaoAutorizadoException("Você não tem permissão para visualizar as vagas.", e);
+        }
+    }
 
     public ResponseEntity<Object> cadastrarVaga(VagaRequest registro, Usuario usuario) {
         Vaga vaga = Vaga.builder()
@@ -63,6 +88,8 @@ public class VagaService {
 
     // TODO: Implementar os filtros no repositório
     public ResponseEntity<Object> listarVagas(String titulo, UUID idCompetencia, Boolean iniciante) {
+        this.assegurarQueUsuarioEstaAtivo();
+
         LocalDateTime now = LocalDateTime.now();
         List<Vaga> vagas;
 
@@ -107,22 +134,16 @@ public class VagaService {
         return ResponseHandler.generateResponse("Nenhum vaga encontrada para este usuário.", HttpStatus.NO_CONTENT);
     }
 
-    public ResponseEntity<Object> localizarVaga(UUID idVaga) {
-        Optional<Vaga> vaga = vagaRepository.findById(idVaga);
-        if (vaga.isPresent()) {
-            return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, vaga);
-        }
-        return ResponseHandler.generateResponse("Nenhum experiencia encontrada para este ID.",
-            HttpStatus.NOT_FOUND);
-    }
+    public Vaga localizar(UUID idVaga) throws RecursoNaoEncontradoException {
+        this.assegurarQueUsuarioEstaAtivo();
 
-    public Vaga localizar(UUID uuid) throws RecursoNaoEncontradoException {
         Vaga vaga = vagaRepository
-            .findById(uuid)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Vaga não encontrado para o id: " + uuid));
+            .findById(idVaga)
+            .orElseThrow(() -> new RecursoNaoEncontradoException(MessageFormat.format(
+                "Nenhuma vaga não encontrado com id \"{0}\".", idVaga)));
 
         if (vaga.getDeletadoEm() != null) {
-            throw new RecursoNaoEncontradoException("Vaga não existe mais");
+            throw new RecursoNaoEncontradoException("Esta vaga não existe mais.");
         }
 
         return vaga;
