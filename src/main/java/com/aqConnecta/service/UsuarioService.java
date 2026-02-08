@@ -5,7 +5,7 @@ import com.aqConnecta.DTOs.request.RegistroRequest;
 import com.aqConnecta.DTOs.response.MeuUsuarioResponse;
 import com.aqConnecta.DTOs.response.OutroUsuarioResponse;
 import com.aqConnecta.DTOs.response.ResponseHandler;
-import com.aqConnecta.exception.RecursoNaoEncontradoException;
+import com.aqConnecta.exception.autenticacao.LoginNecessarioException;
 import com.aqConnecta.exception.base.RecursoNaoEncontradoException;
 import com.aqConnecta.exception.usuarios.UsuarioNaoVerificadoException;
 import com.aqConnecta.exception.usuarios.UsuarioRemovidoException;
@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -170,8 +171,25 @@ public class UsuarioService {
         }
     }
 
+    public Usuario obterDaAutenticacao(Authentication authentication) throws
+        LoginNecessarioException,
+        UsuarioNaoVerificadoException,
+        UsuarioRemovidoException,
+        RecursoNaoEncontradoException {
+        if (authentication == null ||
+            !authentication.isAuthenticated() ||
+            authentication instanceof AnonymousAuthenticationToken
+        ) throw new LoginNecessarioException();
+
+        String email = (String) authentication.getPrincipal();
+        return localizarPorEmail(email);
+    }
+
     public Usuario localizarPorEmail(String email)
-    throws UsuarioNaoVerificadoException, UsuarioRemovidoException, RecursoNaoEncontradoException {
+    throws
+        UsuarioNaoVerificadoException,
+        UsuarioRemovidoException,
+        RecursoNaoEncontradoException {
         Usuario usuario = usuarioRepository
             .findByEmail(email)
             .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado para o email: " + email));
