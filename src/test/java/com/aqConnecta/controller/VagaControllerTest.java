@@ -1,6 +1,7 @@
 package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.VagaRequest;
+import com.aqConnecta.E2ETest;
 import com.aqConnecta.config.AWSClientConfig;
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
@@ -14,9 +15,7 @@ import com.aqConnecta.service.DocumentoService;
 import com.aqConnecta.service.EmailService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
-import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,16 +26,12 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.testcontainers.containers.MariaDBContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -49,12 +44,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 
-@Testcontainers
 @ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-public class VagaControllerTest {
+public class VagaControllerTest extends E2ETest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -88,24 +82,6 @@ public class VagaControllerTest {
     @MockBean
     private AWSClientConfig awsClientConfig;
 
-    @Container
-    @ServiceConnection
-    final static private MariaDBContainer<?>
-        databaseContainer =
-        new MariaDBContainer<>("mariadb:10.10");
-
-    @Autowired
-    private Flyway flyway;
-
-    @BeforeEach
-    void setUp() {
-        flyway.clean();
-        flyway.migrate();
-    }
-
-    final private String email = "teste@mail.com";
-    final private String senha = "12345678";
-
     private Usuario getUser() {
         return getUser(true, false);
     }
@@ -116,11 +92,14 @@ public class VagaControllerTest {
             .orElseThrow(() -> new RuntimeException(
                 "Erro interno, não foi possivel criar conta com permissão de cliente")));
 
+        String email = "teste@mail.com";
+        String senha = "12345678";
+
         var usuario = Usuario.builder()
             .id(UUID.randomUUID())
             .nome("John Doe")
-            .email(this.email)
-            .senha(this.passwordEncoder.encode(this.senha))
+            .email(email)
+            .senha(this.passwordEncoder.encode(senha))
             .permissao(permissoes)
             .deletado(deletado)
             .ativado(ativado)
