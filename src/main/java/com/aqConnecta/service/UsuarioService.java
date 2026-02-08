@@ -174,8 +174,7 @@ public class UsuarioService {
     public Usuario obterDaAutenticacao(Authentication authentication) throws
         LoginNecessarioException,
         UsuarioNaoVerificadoException,
-        UsuarioRemovidoException,
-        RecursoNaoEncontradoException {
+        UsuarioRemovidoException {
         if (authentication == null ||
             !authentication.isAuthenticated() ||
             authentication instanceof AnonymousAuthenticationToken
@@ -186,13 +185,10 @@ public class UsuarioService {
     }
 
     public Usuario localizarPorEmail(String email)
-    throws
-        UsuarioNaoVerificadoException,
-        UsuarioRemovidoException,
-        RecursoNaoEncontradoException {
+    throws UsuarioNaoVerificadoException, UsuarioRemovidoException, LoginNecessarioException {
         Usuario usuario = usuarioRepository
             .findByEmail(email)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado para o email: " + email));
+            .orElseThrow(() -> new LoginNecessarioException("Usuário não encontrado para o email: " + email));
 
         if (!usuario.getAtivado()) throw new UsuarioNaoVerificadoException(email);
         if (usuario.getDeletado()) throw new UsuarioRemovidoException();
