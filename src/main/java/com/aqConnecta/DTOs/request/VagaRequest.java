@@ -1,9 +1,9 @@
 package com.aqConnecta.DTOs.request;
 
 import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -18,7 +18,7 @@ public class VagaRequest {
     private String titulo;
 
     @NotBlank(message = "A vaga precisa de uma descrição.")
-    @Max(value = 200, message = "A descrição não pode ultrapassar 200 caracteres.")
+    @Size(max = 200, message = "A descrição não pode ultrapassar 200 caracteres.")
     private String descricao;
 
     @NotBlank(message = "Insira o local da vaga.")
