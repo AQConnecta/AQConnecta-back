@@ -6,6 +6,7 @@ import com.aqConnecta.DTOs.response.MeuUsuarioResponse;
 import com.aqConnecta.DTOs.response.OutroUsuarioResponse;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.exception.RecursoNaoEncontradoException;
+import com.aqConnecta.exception.base.RecursoNaoEncontradoException;
 import com.aqConnecta.exception.usuarios.UsuarioNaoVerificadoException;
 import com.aqConnecta.exception.usuarios.UsuarioRemovidoException;
 import com.aqConnecta.model.*;
