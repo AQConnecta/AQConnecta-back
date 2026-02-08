@@ -12,13 +12,13 @@ import java.time.LocalDateTime;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 public class VagaRequest {
     @NotBlank(message = "A vaga precisa de um título.")
     private String titulo;
 
     @NotBlank(message = "A vaga precisa de uma descrição.")
-    @Size(max = 200, message = "A descrição não pode ultrapassar 200 caracteres.")
+    @Size(max = 100, message = "A descrição não pode ultrapassar {max} caracteres.")
     private String descricao;
 
     @NotBlank(message = "Insira o local da vaga.")
@@ -27,7 +27,6 @@ public class VagaRequest {
     @NotNull
     private boolean aceitaRemoto;
 
-    @NotNull
     @Future
     private LocalDateTime dataLimiteCandidatura;
 

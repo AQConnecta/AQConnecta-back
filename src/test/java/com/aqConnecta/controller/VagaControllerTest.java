@@ -114,24 +114,49 @@ public class VagaControllerTest extends E2ETest {
         return this.jwtUtil.generateToken(usuario.getEmail());
     }
 
-    private VagaRequest getValidVacancyDto() {
+    private static VagaRequest getValidVacancyDto() {
         return VagaRequest.builder()
             .titulo("Teste")
             .descricao("Foo")
             .localDaVaga("Maringá")
             .aceitaRemoto(true)
             .isIniciante(true)
-            .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2))
+            .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2).withNano(0))
             .build();
     }
 
-    @Test
+    private static Stream<Arguments> invalidVagaProvider() {
+        return Stream.of(
+            Arguments.of("sem título", getValidVacancyDto().toBuilder().titulo(null).build()),
+            Arguments.of("com título vazio", getValidVacancyDto().toBuilder().titulo("").build()),
+            Arguments.of("sem descrição", getValidVacancyDto().toBuilder().descricao(null).build()),
+            Arguments.of("com descrição vazia", getValidVacancyDto().toBuilder().descricao("").build()),
+            Arguments.of("com descrição muito longa", getValidVacancyDto()
+                .toBuilder()
+                .descricao(
+                    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" +
+                    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                .build()),
+            Arguments.of("sem local da vaga", getValidVacancyDto().toBuilder().localDaVaga(null).build()),
+            Arguments.of("com local da vaga vazio", getValidVacancyDto().toBuilder().localDaVaga("").build()),
+            Arguments.of("com data limite no passado",
+                getValidVacancyDto().toBuilder().dataLimiteCandidatura(LocalDateTime.now().minusMinutes(1)).build())
+        );
+    }
+
+    private static Stream<Arguments> validVagaProvider() {
+        return Stream.of(
+            Arguments.of("com todos os argumentos", getValidVacancyDto()),
+            Arguments.of("sem data limite", getValidVacancyDto().toBuilder().dataLimiteCandidatura(null).build())
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("validVagaProvider")
     @DisplayName("[POST /vaga/cadastrar] Deveria permitir cadastrar uma vaga")
-    void createNewVacancy() throws Exception {
+    void shouldCreateNewVacancy(String _case, VagaRequest reqDto) throws Exception {
         final var user = this.getUser();
         final var token = this.generateToken(user);
-
-        final var reqDto = getValidVacancyDto();
 
         final var reqJson = this.objectMapper.writeValueAsString(reqDto);
 
@@ -170,7 +195,7 @@ public class VagaControllerTest extends E2ETest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("invalidVagaProvider")
     @DisplayName("[POST /vaga/cadastrar] Não deveria permitir cadastrar uma vaga")
-    void createNewVacancyWithInvalidData(String _case, VagaRequest invalidDto) throws Exception {
+    void shouldNotCreateNewVacancyWithInvalidData(String _case, VagaRequest invalidDto) throws Exception {
         final var user = this.getUser();
         final var token = this.generateToken(user);
 
@@ -188,66 +213,9 @@ public class VagaControllerTest extends E2ETest {
         Assertions.assertEquals(0, vacancies.size());
     }
 
-    static Stream<Arguments> invalidVagaProvider() {
-        return Stream.of(
-            Arguments.of("sem título", VagaRequest.builder()
-                .descricao("Foo")
-                .localDaVaga("Maringá")
-                .aceitaRemoto(true)
-                .isIniciante(true)
-                .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2))
-                .build()),
-            Arguments.of("sem descrição", VagaRequest.builder()
-                .titulo("Teste")
-                .localDaVaga("Maringá")
-                .aceitaRemoto(true)
-                .isIniciante(true)
-                .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2))
-                .build()),
-            Arguments.of("sem local da vaga", VagaRequest.builder()
-                .titulo("Teste")
-                .descricao("Foo")
-                .aceitaRemoto(true)
-                .isIniciante(true)
-                .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2))
-                .build()),
-            Arguments.of("com data limite no passado", VagaRequest.builder()
-                .titulo("Teste")
-                .descricao("Foo")
-                .localDaVaga("Maringá")
-                .aceitaRemoto(true)
-                .isIniciante(true)
-                .dataLimiteCandidatura(LocalDateTime.now().minusMinutes(1)).build()),
-            Arguments.of("com título vazio", VagaRequest.builder()
-                .titulo("")
-                .descricao("Foo")
-                .localDaVaga("Maringá")
-                .aceitaRemoto(true)
-                .isIniciante(true)
-                .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2))
-                .build()),
-            Arguments.of("com descrição vazia", VagaRequest.builder()
-                .titulo("Teste")
-                .descricao("")
-                .localDaVaga("Maringá")
-                .aceitaRemoto(true)
-                .isIniciante(true)
-                .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2))
-                .build()),
-            Arguments.of("com local da vaga vazio", VagaRequest.builder()
-                .titulo("Teste")
-                .descricao("Foo")
-                .localDaVaga("")
-                .aceitaRemoto(true)
-                .isIniciante(true)
-                .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2))
-                .build())
-        );
-    }
-
     @Test
     @DisplayName("[POST /vaga/cadastrar] Não deveria permitir usuários sem e-mail confirmado criarem vagas")
-    void createVacancyWithoutEmailConfirmation() throws Exception {
+    void shouldNotCreateVacancyWithoutEmailConfirmation() throws Exception {
         final var user = this.getUser(false, false);
         final var token = this.generateToken(user);
         final var reqJson = this.objectMapper.writeValueAsString(getValidVacancyDto());
@@ -265,7 +233,7 @@ public class VagaControllerTest extends E2ETest {
 
     @Test
     @DisplayName("[POST /vaga/cadastrar] Não deveria permitir usuários desabilitados criarem vagas")
-    void createVacancyAsDisabledUser() throws Exception {
+    void shouldNotCreateVacancyAsDisabledUser() throws Exception {
         final var user = this.getUser(true, true);
         final var token = this.generateToken(user);
         final var reqJson = this.objectMapper.writeValueAsString(getValidVacancyDto());
@@ -283,7 +251,7 @@ public class VagaControllerTest extends E2ETest {
 
     @Test
     @DisplayName("[POST /vaga/cadastrar] Não deveria permitir usuários anônimos criarem vagas")
-    void createVacancyAsAnonymousUser() throws Exception {
+    void shouldNotCreateVacancyAsAnonymousUser() throws Exception {
         final var reqJson = this.objectMapper.writeValueAsString(getValidVacancyDto());
 
         this.mockMvc
@@ -299,7 +267,7 @@ public class VagaControllerTest extends E2ETest {
 
     @Test
     @DisplayName("[PUT /vaga/alterar/{id}] Deveria atualizar uma vaga")
-    void updateVacancy() throws Exception {
+    void shouldUpdateVacancy() throws Exception {
         final var usuario = this.getUser();
         final var token = this.generateToken(usuario);
 
@@ -331,8 +299,7 @@ public class VagaControllerTest extends E2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(reqJson)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .with(csrf())
-                .with(anonymous()))
+                .with(csrf()))
             .andExpect(MockMvcResultMatchers.status().isOk());
 
         final var vacancies = this.vagaRepository.findAll();
@@ -346,5 +313,42 @@ public class VagaControllerTest extends E2ETest {
         Assertions.assertEquals(reqDto.isIniciante(), savedVacancy.isIniciante());
         Assertions.assertEquals(reqDto.isAceitaRemoto(), savedVacancy.isAceitaRemoto());
         Assertions.assertEquals(reqDto.getDataLimiteCandidatura(), savedVacancy.getDataLimiteCandidatura());
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidVagaProvider")
+    @DisplayName("[PUT /vaga/alterar/{id}] Não deveria permitir atualizar uma vaga")
+    void shouldNotUpdateVacancyWithInvalidData(String _case, VagaRequest invalidDto) throws Exception {
+        final var usuario = this.getUser();
+        final var token = this.generateToken(usuario);
+
+        var originalVacancy = Vaga.builder()
+            .titulo("Bar")
+            .descricao("Baz")
+            .localDaVaga("Floptropica")
+            .isIniciante(false)
+            .aceitaRemoto(false)
+            .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(1).withNano(0))
+            .publicador(usuario)
+            .build();
+
+        originalVacancy = this.vagaRepository.save(originalVacancy);
+
+        final var reqJson = this.objectMapper.writeValueAsString(invalidDto);
+
+        this.mockMvc
+            .perform(put("/vaga/alterar/" + originalVacancy.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(reqJson)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isBadRequest());
+
+        final var savedVacancy = this.vagaRepository.findById(originalVacancy.getId()).orElseThrow();
+
+        Assertions.assertNotEquals(invalidDto.getTitulo(), savedVacancy.getTitulo());
+        Assertions.assertNotEquals(invalidDto.getDescricao(), savedVacancy.getDescricao());
+        Assertions.assertNotEquals(invalidDto.getLocalDaVaga(), savedVacancy.getLocalDaVaga());
+        Assertions.assertNotEquals(invalidDto.getDataLimiteCandidatura(), savedVacancy.getDataLimiteCandidatura());
     }
 }
