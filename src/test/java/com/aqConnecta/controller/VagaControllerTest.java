@@ -3,14 +3,15 @@ package com.aqConnecta.controller;
 import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.E2ETest;
 import com.aqConnecta.config.AWSClientConfig;
+import com.aqConnecta.factories.models.CandidaturaFactory;
+import com.aqConnecta.factories.models.CurriculoFactory;
 import com.aqConnecta.factories.models.UsuarioFactory;
 import com.aqConnecta.factories.models.VagaFactory;
+import com.aqConnecta.model.Candidatura;
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.model.Vaga;
-import com.aqConnecta.repository.PermissaoRepository;
-import com.aqConnecta.repository.UsuarioRepository;
-import com.aqConnecta.repository.VagaRepository;
+import com.aqConnecta.repository.*;
 import com.aqConnecta.security.JWTUtil;
 import com.aqConnecta.service.AuthService;
 import com.aqConnecta.service.DocumentoService;
@@ -70,6 +71,12 @@ public class VagaControllerTest extends E2ETest {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private CurriculoRepository curriculoRepository;
+
+    @Autowired
+    private CandidaturaRepository candidaturaRepository;
 
     @Autowired
     private VagaRepository vagaRepository;
@@ -660,9 +667,8 @@ public class VagaControllerTest extends E2ETest {
             permissions.add(new Permissao(2, Permissao.ROLE_ADMIN));
 
             var adminUser = UsuarioFactory
-                .criar()
+                .criarAtivado()
                 .toBuilder()
-                .ativado(true)
                 .permissao(permissions)
                 .build();
 
@@ -699,7 +705,7 @@ public class VagaControllerTest extends E2ETest {
     @Test
     @DisplayName("[DELETE /vaga/deletar/{id}] Não deveria deixar um usuário sem e-mail confirmado deletar uma vaga")
     void shouldNotLetDeleteVacancyIfEmailIsntConfirmed() throws Exception {
-        final var user = this.usuarioRepository.save(UsuarioFactory.criar().toBuilder().ativado(false).build());
+        final var user = this.usuarioRepository.save(UsuarioFactory.criar());
         final var token = this.generateToken(user);
         final var vacancy = this.vagaRepository.save(VagaFactory.criar(user));
 
@@ -728,5 +734,107 @@ public class VagaControllerTest extends E2ETest {
             .andExpect(MockMvcResultMatchers.status().isForbidden());
 
         assertEquals(1, this.vagaRepository.findAll().size());
+    }
+
+    @Test
+    @DisplayName("[POST /vaga/candidatar/{idVaga}] Deveria deixar um usuário se candidatar a uma vaga existente")
+    void shouldLetUsersApplyToVacancies() throws Exception {
+        final var user = this.usuarioRepository.save(UsuarioFactory.criarAtivado());
+        final var token = this.generateToken(user);
+
+        final var vaga = this.vagaRepository.save(VagaFactory.criar(user));
+        final var curriculum = this.curriculoRepository.save(CurriculoFactory.criar(user));
+
+        this.mockMvc
+            .perform(post("/vaga/candidatar/{idVaga}", vaga.getId().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(curriculum.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk());
+
+        assertEquals(1, this.candidaturaRepository.findAllCandidaturaByVagaId(vaga.getId()).size());
+    }
+
+    @Test
+    @DisplayName("[POST /vaga/candidatar/{idVaga}] Não deveria deixar um usuário se candidatar a uma vaga sem que ele tenha confirmado seu e-mail")
+    void shouldNotLetUnconfirmedUserApplyToVacancies() throws Exception {
+        final var user = this.usuarioRepository.save(UsuarioFactory.criar());
+        final var token = this.generateToken(user);
+
+        final var vaga = this.vagaRepository.save(VagaFactory.criar(user));
+        final var curriculum = this.curriculoRepository.save(CurriculoFactory.criar(user));
+
+        this.mockMvc
+            .perform(post("/vaga/candidatar/{idVaga}", vaga.getId().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(curriculum.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isForbidden());
+
+        assertEquals(0, this.candidaturaRepository.findAllCandidaturaByVagaId(vaga.getId()).size());
+    }
+
+    private Stream<Arguments> usersThatCanSeeVacancy() {
+        return Stream.of(
+            Arguments.of("for o autor", true),
+            Arguments.of("for um administrador", false)
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("usersThatCanSeeVacancy")
+    @DisplayName("[GET /vaga/candidaturas/{idVaga}] Deveria mostrar os candidatos de uma vaga se o usuário")
+    void shouldLetUserSeeVacancyCandidatures(String _case, boolean isAuthor) throws Exception {
+        final var author = this.usuarioRepository.save(UsuarioFactory.criarAtivado());
+        final var admin = this.usuarioRepository.save(UsuarioFactory.criarAdministrador());
+
+        final var vacancy = this.vagaRepository.save(VagaFactory.criar(author));
+
+        final var totalCandidatures = 5;
+        final var candidatures = new HashSet<Candidatura>();
+        for (var i = 0; i < totalCandidatures; i++) {
+            final var candidate = this.usuarioRepository.save(UsuarioFactory.criarAtivado());
+            final var draftCandidature = CandidaturaFactory.criar(candidate, vacancy);
+            final var curriculum = this.curriculoRepository.save(CurriculoFactory
+                .criar(candidate)
+                .toBuilder()
+                .curriculo(draftCandidature.getCurriculoUrl())
+                .id(draftCandidature.getCurriculo())
+                .build());
+            candidatures.add(this.candidaturaRepository.save(draftCandidature));
+        }
+        vacancy.setCandidaturas(candidatures);
+        this.vagaRepository.save(vacancy);
+
+        final var loggedInUser = isAuthor ? author : admin;
+        final var token = this.generateToken(loggedInUser);
+
+        this.mockMvc
+            .perform(get("/vaga/candidaturas/{idVaga}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists())
+            .andExpect(jsonPath("$.data", Matchers.hasSize(totalCandidatures)));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("usersThatCanSeeVacancy")
+    @DisplayName("[GET /vaga/candidaturas/{idVaga}] Não deveria mostrar os candidatos de uma vaga para nenhum outro usuário comum")
+    void shouldNotShowCandidaturesToAnyOtherCommonUser(String _case, boolean isAuthor) throws Exception {
+        final var author = this.usuarioRepository.save(UsuarioFactory.criarAtivado());
+        final var vacancy = this.vagaRepository.save(VagaFactory.criar(author));
+
+        final var user = this.usuarioRepository.save(UsuarioFactory.criarAtivado());
+        final var token = this.generateToken(user);
+
+        this.mockMvc
+            .perform(get("/vaga/candidaturas/{idVaga}", vacancy.getId().toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isForbidden())
+            .andExpect(jsonPath("$.data").doesNotExist());
     }
 }
