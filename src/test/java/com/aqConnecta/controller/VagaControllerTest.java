@@ -16,7 +16,6 @@ import com.jayway.jsonpath.JsonPath;
 import lombok.AllArgsConstructor;
 import net.datafaker.Faker;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -548,7 +547,6 @@ public class VagaControllerTest extends E2ETest {
         this.validateVacanciesAgainstFilter(filter, data);
     }
 
-    @Disabled("Filtros simultâneos ainda não foram implementados de fato")
     @ParameterizedTest(name = "{0}")
     @MethodSource("getVacanciesListComposedFilters")
     @DisplayName("[GET /vaga/listar] Deveria lidar com vários filtros simultâneos apropriadamente")

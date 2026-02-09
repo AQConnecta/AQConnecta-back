@@ -14,10 +14,11 @@ import com.aqConnecta.model.Vaga;
 import com.aqConnecta.repository.CandidaturaRepository;
 import com.aqConnecta.repository.CurriculoRepository;
 import com.aqConnecta.repository.VagaRepository;
+import com.aqConnecta.repository.specs.VagaSpecs;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +28,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -81,41 +81,16 @@ public class VagaService {
         return vaga;
     }
 
-    // TODO: Implementar os filtros no repositório
     public List<Vaga> listarVagas(String titulo, UUID idCompetencia, Boolean iniciante) {
         this.assegurarQueUsuarioEstaAtivo();
 
-        final var now = LocalDateTime.now();
-        List<Vaga> vagas;
+        Specification<Vaga> spec = Specification.where(VagaSpecs.naoDeletada())
+            .and(VagaSpecs.dentroDoPrazo())
+            .and(VagaSpecs.possuiTitulo(titulo))
+            .and(VagaSpecs.possuiCompetencia(idCompetencia))
+            .and(VagaSpecs.isIniciante(iniciante));
 
-        // Filtra por título, competência ou todas as vagas
-        if (!Strings.isEmpty(titulo)) {
-            vagas = vagaRepository.findByTituloContainingIgnoreCase(titulo);
-        }
-        else if (idCompetencia != null) {
-            vagas = vagaRepository.findByCompetenciaId(idCompetencia);
-        }
-        else {
-            vagas = vagaRepository.findAll();
-        }
-
-        // TODO: fazer essas filtragens no banco, não em memória...
-        // Aplica os filtros de deletado e data limite
-        vagas = vagas
-            .stream()
-            .filter(vaga ->
-                vaga.getDeletadoEm() == null &&
-                (vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now)))
-            .toList();
-
-        // Aplica o filtro de "iniciante" se o parâmetro foi fornecido
-        if (iniciante != null) {
-            vagas = vagas.stream()
-                .filter(vaga -> vaga.isIniciante() == iniciante) // Filtra baseado no campo isIniciante
-                .collect(Collectors.toList());
-        }
-
-        return vagas;
+        return vagaRepository.findAll(spec);
     }
 
     public Set<Vaga> listarVagasPorUsuario(Usuario usuario) {
