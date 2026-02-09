@@ -3,23 +3,20 @@ package com.aqConnecta.controller;
 import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.E2ETest;
 import com.aqConnecta.config.AWSClientConfig;
-import com.aqConnecta.factories.models.CandidaturaFactory;
-import com.aqConnecta.factories.models.CurriculoFactory;
-import com.aqConnecta.factories.models.UsuarioFactory;
-import com.aqConnecta.factories.models.VagaFactory;
-import com.aqConnecta.model.Candidatura;
-import com.aqConnecta.model.Permissao;
-import com.aqConnecta.model.Usuario;
-import com.aqConnecta.model.Vaga;
+import com.aqConnecta.factories.models.*;
+import com.aqConnecta.model.*;
+import com.aqConnecta.presenters.VagaPresenter;
 import com.aqConnecta.repository.*;
 import com.aqConnecta.security.JWTUtil;
 import com.aqConnecta.service.DocumentoService;
 import com.aqConnecta.service.EmailService;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import lombok.AllArgsConstructor;
 import net.datafaker.Faker;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,6 +33,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestConstructor;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -66,6 +64,7 @@ public class VagaControllerTest extends E2ETest {
     private UsuarioRepository usuarioRepository;
     private CurriculoRepository curriculoRepository;
     private CandidaturaRepository candidaturaRepository;
+    private CompetenciaRepository competenciaRepository;
     private VagaRepository vagaRepository;
     private JWTUtil jwtUtil;
 
@@ -347,7 +346,13 @@ public class VagaControllerTest extends E2ETest {
         assertNotEquals(invalidDto.getDataLimiteCandidatura(), savedVacancy.getDataLimiteCandidatura());
     }
 
+    private final static String KNOWN_VACANCY_TITLE = "Foo";
+    private final static UUID KNOWN_COMPETENCY_ID = UUID.randomUUID();
+
     private void insertVacancies(Usuario user, int disabledVacancies, int enabledVacancies, int expiredVacancies) {
+        final var competencies = new HashSet<Competencia>();
+        competencies.add(this.competenciaRepository.save(CompetenciaFactory.criar()));
+
         final var vacancies = new ArrayList<Vaga>();
         final var faker = new Faker();
 
@@ -362,7 +367,7 @@ public class VagaControllerTest extends E2ETest {
             vacancies.add(vacancy);
         }
 
-        for (var i = 0; i < enabledVacancies; i++) {
+        for (var i = 0; i < enabledVacancies - 1; i++) {
             final var vacancy = VagaFactory.criar(user)
                 .toBuilder()
                 .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
@@ -370,6 +375,22 @@ public class VagaControllerTest extends E2ETest {
                 .dataLimiteCandidatura(faker.bool().bool()
                     ? LocalDateTime.ofInstant(faker.timeAndDate().future(20, TimeUnit.DAYS), ZoneId.systemDefault())
                     : null)
+                .competencias(faker.bool().bool() ? competencies : null)
+                .build();
+
+            vacancies.add(vacancy);
+        }
+
+        if (enabledVacancies > 0) {
+            final var vacancy = VagaFactory.criar(user)
+                .toBuilder()
+                .titulo(KNOWN_VACANCY_TITLE)
+                .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
+                    ZoneId.systemDefault()))
+                .dataLimiteCandidatura(faker.bool().bool()
+                    ? LocalDateTime.ofInstant(faker.timeAndDate().future(20, TimeUnit.DAYS), ZoneId.systemDefault())
+                    : null)
+                .competencias(faker.bool().bool() ? competencies : null)
                 .build();
 
             vacancies.add(vacancy);
@@ -387,7 +408,7 @@ public class VagaControllerTest extends E2ETest {
             vacancies.add(vacancy);
         }
 
-        vacancies.forEach(vaga -> this.vagaRepository.save(vaga));
+        this.vagaRepository.saveAll(vacancies);
     }
 
     @Test
@@ -408,6 +429,154 @@ public class VagaControllerTest extends E2ETest {
             .andExpect(jsonPath("$.data").exists())
             .andExpect(jsonPath("$.data").isArray())
             .andExpect(jsonPath("$.data", Matchers.hasSize(5)));
+    }
+
+    @AllArgsConstructor
+    private static class VacancyFilter {
+        public enum Type {
+            Titulo,
+            IdCompetencia,
+            Iniciante
+        }
+
+        public Type type;
+        public String stringifiedContent;
+    }
+
+    private Stream<Arguments> getVacanciesListFilters() {
+        return Stream.of(
+            Arguments.of("contendo texto no título", new VacancyFilter(VacancyFilter.Type.Titulo, KNOWN_VACANCY_TITLE)),
+            Arguments.of("com competência",
+                new VacancyFilter(VacancyFilter.Type.IdCompetencia, KNOWN_COMPETENCY_ID.toString())),
+            Arguments.of("somente vagas que aceitam iniciantes",
+                new VacancyFilter(VacancyFilter.Type.Iniciante, "true")),
+            Arguments.of("somente vagas que não aceitam iniciantes",
+                new VacancyFilter(VacancyFilter.Type.Iniciante, "false"))
+        );
+    }
+
+    private Stream<Arguments> getVacanciesListComposedFilters() {
+        return Stream.of(
+            Arguments.of("título e iniciante", List.of(
+                new VacancyFilter(VacancyFilter.Type.Titulo, KNOWN_VACANCY_TITLE),
+                new VacancyFilter(VacancyFilter.Type.Iniciante, "true")
+            )),
+            Arguments.of("título e não iniciante", List.of(
+                new VacancyFilter(VacancyFilter.Type.Titulo, KNOWN_VACANCY_TITLE),
+                new VacancyFilter(VacancyFilter.Type.Iniciante, "false")
+            )),
+            Arguments.of("com competência e título", List.of(
+                new VacancyFilter(VacancyFilter.Type.IdCompetencia, KNOWN_COMPETENCY_ID.toString()),
+                new VacancyFilter(VacancyFilter.Type.Titulo, KNOWN_VACANCY_TITLE)
+            )),
+            Arguments.of("com competência e iniciante", List.of(
+                new VacancyFilter(VacancyFilter.Type.IdCompetencia, KNOWN_COMPETENCY_ID.toString()),
+                new VacancyFilter(VacancyFilter.Type.Iniciante, "true")
+            ))
+        );
+    }
+
+    private String resolveVacanciesListEndpointUrl(List<VacancyFilter> filters) {
+        final var parameters = new HashMap<String, String>();
+
+        filters.forEach(filter -> {
+            switch (filter.type) {
+                case Titulo:
+                    parameters.put("titulo", filter.stringifiedContent);
+                    break;
+                case IdCompetencia:
+                    parameters.put("idCompetencia", filter.stringifiedContent);
+                    break;
+                case Iniciante:
+                    parameters.put("iniciante", filter.stringifiedContent);
+                    break;
+            }
+        });
+
+        var builder = UriComponentsBuilder.fromPath("/vaga/listar");
+        parameters.forEach(builder::queryParam);
+        return builder.toUriString();
+    }
+
+    private void validateVacanciesAgainstFilter(VacancyFilter filter, List<VagaPresenter> vacancies) {
+        final var expectedValue = filter.stringifiedContent;
+
+        switch (filter.type) {
+            case Titulo:
+                assertThat(vacancies).allSatisfy(vacancy -> assertThat(vacancy.titulo()).containsIgnoringCase(
+                    expectedValue));
+                break;
+            case IdCompetencia:
+                assertThat(vacancies).allSatisfy(vaga -> assertTrue(vaga.competencias()
+                    .stream()
+                    .anyMatch(competency -> competency.getId().toString().equals(expectedValue))));
+                break;
+            case Iniciante:
+                assertThat(vacancies).allSatisfy(vaga -> assertEquals(vaga.isIniciante(),
+                    filter.stringifiedContent.equals("true")));
+                break;
+        }
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("getVacanciesListFilters")
+    @DisplayName("[GET /vaga/listar] Deveria lidar com filtros corretamente")
+    void shouldHandleFiltersProperly(String _case, VacancyFilter filter) throws Exception {
+        var user = this.getUser();
+        var token = this.generateToken(user);
+
+        final var totalVacancies = 15;
+        this.insertVacancies(user, 0, totalVacancies, 0);
+        assertEquals(totalVacancies, this.vagaRepository.findAll().size());
+
+        var body = this.mockMvc
+            .perform(get(this.resolveVacanciesListEndpointUrl(List.of(filter)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists())
+            .andExpect(jsonPath("$.data").isArray())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        List<VagaPresenter> data = objectMapper.readValue(JsonPath.read(body, "$.data").toString(),
+            new TypeReference<List<VagaPresenter>>() {
+            });
+
+        this.validateVacanciesAgainstFilter(filter, data);
+    }
+
+    @Disabled("Filtros simultâneos ainda não foram implementados de fato")
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("getVacanciesListComposedFilters")
+    @DisplayName("[GET /vaga/listar] Deveria lidar com vários filtros simultâneos apropriadamente")
+    void shouldHandleMultipleFiltersProperly(String _case, List<VacancyFilter> filters) throws Exception {
+        var user = this.getUser();
+        var token = this.generateToken(user);
+
+        final var totalVacancies = 15;
+        this.insertVacancies(user, 0, totalVacancies, 0);
+        assertEquals(totalVacancies, this.vagaRepository.findAll().size());
+
+        var body = this.mockMvc
+            .perform(get(this.resolveVacanciesListEndpointUrl(filters))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .with(csrf()))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(jsonPath("$.data").exists())
+            .andExpect(jsonPath("$.data").isArray())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        List<VagaPresenter> data = objectMapper.readValue(JsonPath.read(body, "$.data").toString(),
+            new TypeReference<List<VagaPresenter>>() {
+            });
+
+        assertThat(filters).allSatisfy(filter -> this.validateVacanciesAgainstFilter(filter, data));
     }
 
     @Test
