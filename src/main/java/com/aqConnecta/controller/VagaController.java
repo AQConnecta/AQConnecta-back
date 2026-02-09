@@ -5,6 +5,7 @@ import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.exception.base.RecursoNaoEncontradoException;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.model.Vaga;
+import com.aqConnecta.presenters.VagaPresenter;
 import com.aqConnecta.security.AuthUser;
 import com.aqConnecta.security.RequireAuth;
 import com.aqConnecta.service.UsuarioService;
@@ -36,7 +37,8 @@ public class VagaController {
     public ResponseEntity<Object> cadastrarVaga(
         @Valid @RequestBody VagaRequest vagaRequest,
         @AuthUser Usuario usuario) {
-        return service.cadastrarVaga(vagaRequest, usuario);
+        final var vaga = service.cadastrarVaga(vagaRequest, usuario);
+        return ResponseHandler.generateResponse("Vaga cadastrada com sucesso!", HttpStatus.CREATED, vaga);
     }
 
     @GetMapping("/listar")
@@ -45,21 +47,28 @@ public class VagaController {
         @RequestParam(value = "idCompetencia", required = false) UUID idCompetencia,
         @RequestParam(value = "iniciante", required = false) Boolean iniciante
     ) {
-        return service.listarVagas(titulo, idCompetencia, iniciante);
+        final var vagas = service
+            .listarVagas(titulo, idCompetencia, iniciante)
+            .stream()
+            .map(VagaPresenter::apresentar)
+            .toList();
+
+        return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, vagas);
     }
 
     @GetMapping("/listar/{idUsuario}")
     public ResponseEntity<Object> listarVagasPorUsuario(@PathVariable UUID idUsuario) {
         Usuario usuario;
 
-        try {
-            usuario = usuarioService.localizar(idUsuario);
-        }
-        catch (Exception e) {
-            throw new RecursoNaoEncontradoException("Usuário inexistente.");
-        }
+        try {usuario = usuarioService.localizar(idUsuario);}
+        catch (Exception e) {throw new RecursoNaoEncontradoException("Usuário inexistente.");}
 
-        return service.listarVagasPorUsuario(usuario);
+        final var vagas = service.listarVagasPorUsuario(usuario)
+            .stream()
+            .map(VagaPresenter::apresentar)
+            .toList();
+
+        return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, vagas);
     }
 
     @GetMapping("/localizar/{idVaga}")
@@ -72,19 +81,22 @@ public class VagaController {
     public ResponseEntity<Object> alterarVaga(@PathVariable UUID idVaga,
         @Valid @RequestBody VagaRequest vagaRequest,
         @AuthUser Usuario usuario) {
-        return service.alterarVaga(idVaga, vagaRequest, usuario);
+        final var vagaAtualizada = service.alterarVaga(idVaga, vagaRequest, usuario);
+        return ResponseHandler.generateResponse("Vaga atualizada com súcesso!", HttpStatus.OK, vagaAtualizada);
     }
 
     @DeleteMapping("/deletar/{idVaga}")
     public ResponseEntity<Object> deletarVaga(@PathVariable UUID idVaga, @AuthUser Usuario usuario) {
-        return service.deletarVaga(idVaga, usuario);
+        service.deletarVaga(idVaga, usuario);
+        return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
     }
 
     @PostMapping("/candidatar/{idVaga}")
     public ResponseEntity<Object> candidatar(@PathVariable UUID idVaga,
         @RequestBody Integer curriculoId,
         @AuthUser Usuario usuario) {
-        return service.candidatar(idVaga, curriculoId, usuario);
+        final var vaga = service.candidatar(idVaga, curriculoId, usuario);
+        return ResponseHandler.generateResponse("Candidatura enviada com sucesso", HttpStatus.OK, vaga);
     }
 
     @GetMapping("/candidaturas/{idVaga}")

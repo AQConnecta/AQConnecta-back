@@ -4,6 +4,7 @@ import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.exception.base.AcaoProibidaException;
 import com.aqConnecta.exception.base.NaoAutorizadoException;
 import com.aqConnecta.exception.base.RecursoNaoEncontradoException;
+import com.aqConnecta.exception.vagas.JaSeCandidatouParaVagaException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +36,11 @@ public class GlobalExceptionsHandler {
     @ExceptionHandler(NaoAutorizadoException.class)
     public ResponseEntity<?> handleException(NaoAutorizadoException ex) {
         return ResponseHandler.generateResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(JaSeCandidatouParaVagaException.class)
+    public ResponseEntity<?> handleException(JaSeCandidatouParaVagaException ex) {
+        return ResponseHandler.generateResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
