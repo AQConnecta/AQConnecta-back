@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "TB_USUARIO")
@@ -88,12 +88,18 @@ public class Usuario implements Serializable {
 //	@OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
 //	private Set<Candidatura> candidaturas = new HashSet<>();
 
-    public boolean verificarUsuarioNaoEAdministrador() {
+    public boolean ehAdministrador() {
         return this
             .getPermissao()
             .stream()
-            .noneMatch(permissao -> permissao
-                .getDescricao()
-                .equals(Permissao.ROLE_ADMIN));
+            .anyMatch(permissao -> permissao.getDescricao().equals(Permissao.ROLE_ADMIN));
+    }
+
+    public boolean verificarUsuarioNaoEAdministrador() {
+        return !this.ehAdministrador();
+    }
+
+    public boolean equals(Usuario outro) {
+        return outro.getId().equals(this.getId());
     }
 }

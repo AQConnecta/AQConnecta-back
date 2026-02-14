@@ -1,6 +1,7 @@
 package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.LoginRequest;
+import com.aqConnecta.E2ETest;
 import com.aqConnecta.config.AWSClientConfig;
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
@@ -11,29 +12,23 @@ import com.aqConnecta.service.AuthService;
 import com.aqConnecta.service.DocumentoService;
 import com.aqConnecta.service.EmailService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.flywaydb.core.Flyway;
+import lombok.AllArgsConstructor;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestConstructor;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.testcontainers.containers.MariaDBContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -44,56 +39,31 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-@Testcontainers
-@ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class AuthControllerTest {
+@AllArgsConstructor
+@TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
+class AuthControllerTest extends E2ETest {
 
-    @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
     private PermissaoRepository permissaoRepository;
-
-    @Autowired
     private UsuarioRepository usuarioRepository;
-
-    @Autowired
     private JWTUtil jwtUtil;
-
-    @Autowired
     private AuthService authService;
 
     // Mockamos esses para não interagirem com nada externo
     @MockBean
+    @SuppressWarnings("unused")
     private EmailService emailService;
     @MockBean
+    @SuppressWarnings("unused")
     private DocumentoService documentoService;
     @MockBean
+    @SuppressWarnings("unused")
     private AWSClientConfig awsClientConfig;
-
-    @Container
-    @ServiceConnection
-    final static private MariaDBContainer<?>
-        databaseContainer =
-        new MariaDBContainer<>("mariadb:10.10");
-
-    @Autowired
-    private Flyway flyway;
-
-    @BeforeEach
-    void setUp() {
-        flyway.clean();
-        flyway.migrate();
-    }
 
     final private String email = "teste@mail.com";
     final private String senha = "12345678";
@@ -115,7 +85,7 @@ class AuthControllerTest {
 
     @Test
     @DisplayName("Não deveria permitir um usuário logar sem que seu e-mail esteja confirmado")
-    void login_with_unconfirmed_email() throws Exception {
+    void loginWithUnconfirmedEmail() throws Exception {
         final var usuario = this.getUser();
         this.usuarioRepository.save(usuario);
 
@@ -133,14 +103,14 @@ class AuthControllerTest {
                 .content(reqJson)
                 .with(csrf())
                 .with(anonymous()))
-            .andExpect(MockMvcResultMatchers.status().isBadRequest())
+            .andExpect(MockMvcResultMatchers.status().isForbidden())
             .andExpect(MockMvcResultMatchers.jsonPath("$.message").exists())
             .andExpect(MockMvcResultMatchers.jsonPath("$.message", Matchers.containsString(email)));
     }
 
     @Test
     @DisplayName("Não deveria permitir um usuário se autenticar com credenciais inválidas")
-    void login_with_invalid_credentials() throws Exception {
+    void loginWithInvalidCredentials() throws Exception {
         final var usuario = this.getUser();
         // Confirma o e-mail
         usuario.setAtivado(true);

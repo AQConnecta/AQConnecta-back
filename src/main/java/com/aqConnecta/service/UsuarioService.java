@@ -5,7 +5,8 @@ import com.aqConnecta.DTOs.request.RegistroRequest;
 import com.aqConnecta.DTOs.response.MeuUsuarioResponse;
 import com.aqConnecta.DTOs.response.OutroUsuarioResponse;
 import com.aqConnecta.DTOs.response.ResponseHandler;
-import com.aqConnecta.exception.RecursoNaoEncontradoException;
+import com.aqConnecta.exception.autenticacao.LoginNecessarioException;
+import com.aqConnecta.exception.base.RecursoNaoEncontradoException;
 import com.aqConnecta.exception.usuarios.UsuarioNaoVerificadoException;
 import com.aqConnecta.exception.usuarios.UsuarioRemovidoException;
 import com.aqConnecta.model.*;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -169,11 +171,24 @@ public class UsuarioService {
         }
     }
 
+    public Usuario obterDaAutenticacao(Authentication authentication) throws
+        LoginNecessarioException,
+        UsuarioNaoVerificadoException,
+        UsuarioRemovidoException {
+        if (authentication == null ||
+            !authentication.isAuthenticated() ||
+            authentication instanceof AnonymousAuthenticationToken
+        ) throw new LoginNecessarioException();
+
+        String email = (String) authentication.getPrincipal();
+        return localizarPorEmail(email);
+    }
+
     public Usuario localizarPorEmail(String email)
-    throws UsuarioNaoVerificadoException, UsuarioRemovidoException, RecursoNaoEncontradoException {
+    throws UsuarioNaoVerificadoException, UsuarioRemovidoException, LoginNecessarioException {
         Usuario usuario = usuarioRepository
             .findByEmail(email)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado para o email: " + email));
+            .orElseThrow(() -> new LoginNecessarioException("Usuário não encontrado para o email: " + email));
 
         if (!usuario.getAtivado()) throw new UsuarioNaoVerificadoException(email);
         if (usuario.getDeletado()) throw new UsuarioRemovidoException();
@@ -181,16 +196,17 @@ public class UsuarioService {
         return usuario;
     }
 
-    public Usuario localizar(UUID uuid) throws Exception {
+    public Usuario localizar(UUID uuid)
+    throws RecursoNaoEncontradoException, UsuarioNaoVerificadoException, UsuarioRemovidoException {
         Usuario usuario = usuarioRepository.findById(uuid)
-            .orElseThrow(() -> new Exception("Usuário não encontrado para o id: " + uuid));
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado para o id: " + uuid));
 
         if (!usuario.getAtivado()) {
-            throw new Exception("Usuário não foi ativado, verifique seu email:" + uuid);
+            throw new UsuarioNaoVerificadoException("Usuário não foi ativado, verifique seu email:" + uuid);
         }
 
         if (usuario.getDeletado()) {
-            throw new Exception("Usuário não existe mais");
+            throw new UsuarioRemovidoException();
         }
 
         return usuario;
@@ -235,33 +251,14 @@ public class UsuarioService {
 
     public ResponseEntity<Object> salvarImagemPerfil(MultipartFile file) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null &&
-            authentication.isAuthenticated() &&
-            authentication.getName()
-                .toLowerCase()
-                .contains(
-                    "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
+        Usuario usuario = obterDaAutenticacao(authentication);
 
-        try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario =
-                usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
-            usuario.setFotoPerfil(documentoService.upload(file));
-            usuarioRepository.save(usuario);
+        usuario.setFotoPerfil(documentoService.upload(file));
+        usuarioRepository.save(usuario);
 
-            return ResponseHandler.generateResponse("Foto adicionada com sucesso",
-                HttpStatus.OK,
-                documentoService.upload(file));
-        }
-        catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao mandar a imagem.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
-        }
+        return ResponseHandler.generateResponse("Foto adicionada com sucesso",
+            HttpStatus.OK,
+            documentoService.upload(file));
     }
 
     public ResponseEntity<Object> removerImagemPerfil() {

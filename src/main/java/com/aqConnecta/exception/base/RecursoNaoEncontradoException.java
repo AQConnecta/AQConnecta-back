@@ -1,10 +1,14 @@
-package com.aqConnecta.exception;
+package com.aqConnecta.exception.base;
 
 public class RecursoNaoEncontradoException extends RuntimeException {
-    private final static String defaultErrorMessage = "Recurso não encontrado";
+    private final static String defaultErrorMessage = "Recurso não encontrado.";
 
     public RecursoNaoEncontradoException() {
         super(defaultErrorMessage);
+    }
+
+    public RecursoNaoEncontradoException(Throwable cause) {
+        super(defaultErrorMessage, cause);
     }
 
     public RecursoNaoEncontradoException(String message) {
@@ -13,9 +17,5 @@ public class RecursoNaoEncontradoException extends RuntimeException {
 
     public RecursoNaoEncontradoException(String message, Throwable cause) {
         super(message, cause);
-    }
-
-    public RecursoNaoEncontradoException(Throwable cause) {
-        super(defaultErrorMessage, cause);
     }
 }
