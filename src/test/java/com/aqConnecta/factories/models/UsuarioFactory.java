@@ -2,9 +2,11 @@ package com.aqConnecta.factories.models;
 
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
+import com.aqConnecta.utils.SlugUtils;
 import net.datafaker.Faker;
 
 import java.util.HashSet;
+import java.util.UUID;
 
 public class UsuarioFactory {
     public static Usuario criar() {
@@ -25,14 +27,16 @@ public class UsuarioFactory {
         if (ehAdmin) permissions.add(new Permissao(2, Permissao.ROLE_ADMIN));
         else permissions.add(new Permissao(1, Permissao.ROLE_CLIENTE));
 
-
         final var faker = new Faker();
+        final var nome = faker.name().fullName();
+        final var prefixo = UUID.randomUUID().toString().substring(0, 8);
+
         return Usuario
             .builder()
-            .nome(faker.name().fullName())
-            .email(faker.internet().emailAddress())
+            .nome(nome)
+            .email(prefixo + "_" + faker.internet().emailAddress())
             .descricao(faker.yoda().quote())
-            .userUrl(faker.internet().url())
+            .userUrl(SlugUtils.criarSlug(nome + "-" + prefixo))
             .permissao(permissions)
             .senha("mock-password")
             .build();
