@@ -47,6 +47,7 @@ public class Usuario implements Serializable {
         joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
         inverseJoinColumns = @JoinColumn(name = "ID_PERMISSAO", referencedColumnName = "ID")
     )
+    @Builder.Default
     private Set<Permissao> permissao = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -55,19 +56,22 @@ public class Usuario implements Serializable {
         joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
         inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
     )
-//	@JsonManagedReference
+    @Builder.Default
     private Set<Competencia> competencias = new HashSet<>();
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
 //	@JsonManagedReference // evitar recursao infinita
+    @Builder.Default
     private Set<Endereco> enderecos = new HashSet<>();
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
 //	@JsonManagedReference // evitar recursao infinita
+    @Builder.Default
     private Set<Experiencia> experiencias = new HashSet<>();
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
 //	@JsonManagedReference // evitar recursao infinita
+    @Builder.Default
     private Set<FormacaoAcademica> formacoesAcademicas = new HashSet<>();
 
     @Builder.Default
@@ -83,10 +87,8 @@ public class Usuario implements Serializable {
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
 //	@JsonManagedReference // evitar recursão infinita
+    @Builder.Default
     private Set<Curriculo> curriculo = new HashSet<>();
-
-//	@OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
-//	private Set<Candidatura> candidaturas = new HashSet<>();
 
     public boolean ehAdministrador() {
         return this
