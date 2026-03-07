@@ -83,23 +83,14 @@ public class VagaControllerTest extends E2ETest {
     }
 
     private Usuario getUser(boolean ativado, boolean deletado) {
-        final var permissoes = new HashSet<Permissao>();
-        permissoes.add(this.permissaoRepository.findById(1L)
-            .orElseThrow(() -> new RuntimeException(
-                "Erro interno, não foi possivel criar conta com permissão de cliente")));
-
-        var usuario = Usuario
-            .builder()
-            .nome("John Doe")
-            .email("teste@mail.com")
-            .senha(this.passwordEncoder.encode("12345678"))
-            .permissao(permissoes)
-            .deletado(deletado)
+        var usuario = UsuarioFactory.criar()
+            .toBuilder()
             .ativado(ativado)
+            .deletado(deletado)
+            .senha(this.passwordEncoder.encode("12345678"))
             .build();
 
         usuario = this.usuarioRepository.save(usuario);
-
         return usuario;
     }
 
