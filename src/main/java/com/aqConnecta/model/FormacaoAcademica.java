@@ -1,7 +1,6 @@
 package com.aqConnecta.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,19 +28,27 @@ public class FormacaoAcademica implements Serializable {
     @JoinColumn(name = "ID_USUARIO")
     @JsonBackReference // evitar recursao infinita
     private Usuario usuario;
-    @OneToOne
-    @JoinColumn(name = "ID_UNIVERSIDADE")
-//    @JsonManagedReference // evitar recursao infinita
+
+    @ManyToOne(cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "ID_UNIVERSIDADE", nullable = false)
     private Universidade universidade;
+
     @Column(name = "DESCRICAO")
     private String descricao;
+
     @Column(name = "DIPLOMA")
     private String diploma;
+
     @Column(name = "DATA_INICIO")
     private LocalDateTime dataInicio;
+
     @Column(name = "DATA_FIM")
     private LocalDateTime dataFim;
-    @Column(name = "ATUAL_FORMACAO")
-    private boolean atualFormacao;
+
+    // TODO: fazer este campo ser non nullable e mudar o tipo de volta para `boolean` (primitivo)
+    // como atualmente é nullable no DB, o tipo primitivo poderia ocasionar um `NullPointerException`
+    // totalmente inesperado
+    @Column(name = "ATUAL_FORMACAO", nullable = false)
+    private Boolean atualFormacao = false;
 
 }
