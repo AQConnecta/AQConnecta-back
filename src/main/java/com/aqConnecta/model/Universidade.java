@@ -1,11 +1,12 @@
 package com.aqConnecta.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -42,4 +43,9 @@ public class Universidade implements Serializable {
     @Column(name = "SITUACAO_IES")
     private String situacaoIes;
 
+    @Builder.Default
+    @ToString.Exclude
+    @JsonIgnore
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "universidade", orphanRemoval = true)
+    private Set<FormacaoAcademica> formacoesAcademicasDeUsuarios = new HashSet<>();
 }
