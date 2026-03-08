@@ -24,9 +24,11 @@ public class FormacaoAcademica implements Serializable {
     @Column(name = "ID")
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "ID_USUARIO")
-    @JsonBackReference // evitar recursao infinita
+    // TODO: fazer essa coluna ser non nullable. Hoje, com ela podendo ser nula, o sistema pode começar
+    // a abrigar registros orfãos (adicionar optional = false no @ManyToOne e nullable = false no @JoinColumn)
+    @ManyToOne(cascade = CascadeType.PERSIST, optional = false)
+    @JoinColumn(name = "ID_USUARIO", nullable = false)
+    @JsonBackReference
     private Usuario usuario;
 
     @ManyToOne(cascade = CascadeType.PERSIST)
