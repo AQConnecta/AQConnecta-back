@@ -11,6 +11,7 @@ import com.aqConnecta.exception.usuarios.UsuarioNaoVerificadoException;
 import com.aqConnecta.exception.usuarios.UsuarioRemovidoException;
 import com.aqConnecta.model.*;
 import com.aqConnecta.repository.*;
+import com.aqConnecta.utils.SlugUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +28,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -70,10 +69,8 @@ public class UsuarioService {
             return ResponseHandler.generateResponse("Erro: Email já está em uso!", HttpStatus.CONFLICT, null);
         }
 
-        Set<Permissao> permissoes = new HashSet<>();
-        permissoes.add(permissaoRepository.findById(1L)
-            .orElseThrow(() -> new RuntimeException(
-                "Erro interno, não foi possivel criar conta com permissão de cliente")));
+        final var permissoes = new HashSet<Permissao>();
+        permissoes.add(permissaoRepository.getReferenceById(1L));
 
         Usuario usuario = Usuario.builder()
             .id(UUID.randomUUID())
@@ -81,8 +78,9 @@ public class UsuarioService {
             .email(registro.getEmail())
             .senha(encoder.encode(registro.getSenha()))
             .permissao(permissoes)
-            .userUrl(generateUserUrl(registro.getNome()))
             .build();
+
+        this.garantirSlugValido(usuario);
 
         usuarioRepository.save(usuario);
 
@@ -103,21 +101,14 @@ public class UsuarioService {
         return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario);
     }
 
-    private String generateUserUrl(String nome) {
-        if (nome == null) {
-            return null;
-        }
-        Random random = new Random();
+    private void garantirSlugValido(Usuario usuario) {
+        if (usuario.getUserUrl() == null) usuario.setUserUrl(SlugUtils.criarSlug(usuario.getNome()));
 
-        String normalized = Normalizer.normalize(nome, Normalizer.Form.NFD);
-        normalized = Pattern.compile("\\p{M}").matcher(normalized).replaceAll("");
+        final var slugJaEstaSendoUtilizado = this.usuarioRepository.existsByUserUrl(usuario.getUserUrl());
+        if (!slugJaEstaSendoUtilizado) return;
 
-        normalized = normalized.toLowerCase().replace(" ", "-");
-        if (usuarioRepository.existsByUserUrl(normalized)) {
-            normalized = normalized.concat(String.format("-%d", Math.abs(random.nextLong())));
-        }
-
-        return normalized;
+        final var novoSlug = usuario.getUserUrl() + "-" + UUID.randomUUID().toString().substring(0, 8);
+        usuario.setUserUrl(novoSlug);
     }
 
     public ResponseEntity<Object> confirmaEmail(String confirmaToken) throws Exception {
@@ -134,6 +125,17 @@ public class UsuarioService {
         return ResponseHandler.generateResponse("Error: Não foi possivel verificar o email", HttpStatus.BAD_REQUEST);
     }
 
+    public Usuario localizarCompletoPorUrl(String urlDoUsuario) throws RecursoNaoEncontradoException {
+        final var mensagemDeErroNaoEncontrado =
+            MessageFormat.format("Nenhum usuário atende pelo URL {0}", urlDoUsuario);
+
+        return usuarioRepository
+            .findByUserUrl(urlDoUsuario)
+            .flatMap(_usuario -> _usuario.getDeletado() ? Optional.empty() : Optional.of(_usuario))
+            .orElseThrow(() -> new RecursoNaoEncontradoException(mensagemDeErroNaoEncontrado));
+    }
+
+    @Deprecated(forRemoval = true)
     public ResponseEntity<Object> localizarPorUrl(String userUrl) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
