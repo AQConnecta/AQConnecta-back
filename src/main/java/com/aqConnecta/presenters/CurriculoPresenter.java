@@ -1,12 +1,12 @@
 package com.aqConnecta.presenters;
 
 import com.aqConnecta.model.Curriculo;
-import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 
 public record CurriculoPresenter(
-    Integer id,
-    String curriculo,
-    @Nullable String nomeCurriculo
+    @NotNull Integer id,
+    @NotNull String curriculo,
+    String nomeCurriculo
 ) {
 
     public static CurriculoPresenter apresentar(Curriculo curriculo) {

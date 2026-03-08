@@ -2,18 +2,19 @@ package com.aqConnecta.presenters;
 
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.Set;
 
 public record UsuarioAutorPresenter(
-    String id,
-    String email,
-    String nome,
-    Set<Permissao> permissao,
-    Boolean deletado,
-    Boolean ativado,
+    @NotNull String id,
+    @NotNull String email,
+    @NotNull String nome,
+    @NotNull Set<Permissao> permissao,
+    @NotNull Boolean deletado,
+    @NotNull Boolean ativado,
     String fotoPerfil,
-    String userUrl
+    @NotNull String userUrl
 ) {
     public static UsuarioAutorPresenter apresentar(Usuario autor) {
         return new UsuarioAutorPresenter(

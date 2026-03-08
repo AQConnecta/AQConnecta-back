@@ -1,19 +1,19 @@
 package com.aqConnecta.presenters;
 
 import com.aqConnecta.model.Experiencia;
-import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
 
 
 public record ExperienciaPresenter(
-    String id,
-    String titulo,
-    String instituicao,
-    String descricao,
-    LocalDateTime dataInicio,
-    boolean corrente
+    @NotNull String id,
+    @NotNull String titulo,
+    @NotNull String instituicao,
+    @NotNull String descricao,
+    @NotNull Instant dataInicio,
     Instant dataFim,
+    @NotNull boolean corrente
 ) {
     public static ExperienciaPresenter apresentar(Experiencia experiencia) {
         return new ExperienciaPresenter(

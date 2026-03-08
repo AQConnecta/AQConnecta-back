@@ -1,17 +1,18 @@
 package com.aqConnecta.presenters;
 
 import com.aqConnecta.model.Endereco;
+import jakarta.validation.constraints.NotNull;
 
 public record EnderecoPresenter(
-    String id,
-    String cep,
-    String rua,
-    String bairro,
-    String cidade,
-    String estado,
-    String pais,
-    String numeroCasa,
-    String complemento
+    @NotNull String id,
+    @NotNull String cep,
+    @NotNull String rua,
+    @NotNull String bairro,
+    @NotNull String cidade,
+    @NotNull String estado,
+    @NotNull String pais,
+    @NotNull String numeroCasa,
+    @NotNull String complemento
 ) {
     public static EnderecoPresenter apresentar(Endereco endereco) {
         return new EnderecoPresenter(

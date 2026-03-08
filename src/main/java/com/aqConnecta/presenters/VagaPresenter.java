@@ -8,17 +8,17 @@ import java.time.Instant;
 import java.util.Set;
 
 public record VagaPresenter(
-    String id,
+    @NotNull String id,
     UsuarioAutorPresenter publicador,
-    String titulo,
-    String descricao,
-    String localDaVaga,
-    boolean aceitaRemoto,
+    @NotNull String titulo,
+    @NotNull String descricao,
+    @NotNull String localDaVaga,
+    @NotNull boolean aceitaRemoto,
     Instant dataLimiteCandidatura,
     Set<Competencia> competencias,
-    boolean isIniciante
     Instant criadoEm,
     Instant atualizadoEm,
+    @NotNull boolean isIniciante
 ) {
     public static VagaPresenter apresentar(Vaga vaga) {
         return new VagaPresenter(

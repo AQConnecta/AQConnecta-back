@@ -1,13 +1,13 @@
 package com.aqConnecta.presenters;
 
 import com.aqConnecta.model.Universidade;
-import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 
 public record UniversidadePreviewPresenter(
-    String id,
-    int codigoIes,
-    String nomeInstituicao,
-    @Nullable String sigla
+    @NotNull String id,
+    @NotNull int codigoIes,
+    @NotNull String nomeInstituicao,
+    String sigla
 ) {
     public static UniversidadePreviewPresenter apresentar(Universidade universidade) {
         return new UniversidadePreviewPresenter(

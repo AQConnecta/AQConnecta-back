@@ -1,19 +1,19 @@
 package com.aqConnecta.presenters;
 
 import com.aqConnecta.model.FormacaoAcademica;
-import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
 
 
 public record FormacaoAcademicaPresenter(
-    String id,
-    UniversidadePreviewPresenter universidade,
-    String descricao,
-    @Nullable String diploma,
-    boolean corrente
+    @NotNull String id,
+    @NotNull UniversidadePreviewPresenter universidade,
+    @NotNull String descricao,
+    String diploma,
     @NotNull Instant dataInicio,
     Instant dataFim,
+    @NotNull boolean corrente
 ) {
     public static FormacaoAcademicaPresenter apresentar(FormacaoAcademica formacao) {
         final var corrente = formacao.getAtualFormacao() != null && formacao.getAtualFormacao();
