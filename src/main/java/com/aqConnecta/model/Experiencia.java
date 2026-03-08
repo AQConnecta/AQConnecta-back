@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -36,11 +36,11 @@ public class Experiencia implements Serializable {
     @Column(name = "DESCRICAO")
     private String descricao;
     @Column(name = "DATA_INICIO")
-    private LocalDateTime dataInicio;
+    private Instant dataInicio;
 
     // pode ser nulo
     @Column(name = "DATA_FIM")
-    private LocalDateTime dataFim;
+    private Instant dataFim;
     @Column(name = "ATUAL_EXPERIENCIA")
     private boolean atualExperiencia;
 

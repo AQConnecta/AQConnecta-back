@@ -3,16 +3,17 @@ package com.aqConnecta.presenters;
 import com.aqConnecta.model.FormacaoAcademica;
 import jakarta.annotation.Nullable;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+
 
 public record FormacaoAcademicaPresenter(
     String id,
     UniversidadePreviewPresenter universidade,
     String descricao,
     @Nullable String diploma,
-    LocalDateTime dataInicio,
-    @Nullable LocalDateTime dataFim,
     boolean corrente
+    @NotNull Instant dataInicio,
+    Instant dataFim,
 ) {
     public static FormacaoAcademicaPresenter apresentar(FormacaoAcademica formacao) {
         final var corrente = formacao.getAtualFormacao() != null && formacao.getAtualFormacao();

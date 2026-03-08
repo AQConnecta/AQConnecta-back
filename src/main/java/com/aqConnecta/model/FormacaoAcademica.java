@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -40,10 +40,10 @@ public class FormacaoAcademica implements Serializable {
     private String diploma;
 
     @Column(name = "DATA_INICIO")
-    private LocalDateTime dataInicio;
+    private Instant dataInicio;
 
     @Column(name = "DATA_FIM")
-    private LocalDateTime dataFim;
+    private Instant dataFim;
 
     // TODO: fazer este campo ser non nullable e mudar o tipo de volta para `boolean` (primitivo)
     // como atualmente é nullable no DB, o tipo primitivo poderia ocasionar um `NullPointerException`

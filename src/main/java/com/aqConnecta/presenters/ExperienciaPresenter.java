@@ -3,7 +3,8 @@ package com.aqConnecta.presenters;
 import com.aqConnecta.model.Experiencia;
 import jakarta.annotation.Nullable;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+
 
 public record ExperienciaPresenter(
     String id,
@@ -11,8 +12,8 @@ public record ExperienciaPresenter(
     String instituicao,
     String descricao,
     LocalDateTime dataInicio,
-    @Nullable LocalDateTime dataFim,
     boolean corrente
+    Instant dataFim,
 ) {
     public static ExperienciaPresenter apresentar(Experiencia experiencia) {
         return new ExperienciaPresenter(

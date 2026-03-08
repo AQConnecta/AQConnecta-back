@@ -5,8 +5,6 @@ import com.aqConnecta.model.Universidade;
 import com.aqConnecta.model.Usuario;
 import net.datafaker.Faker;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 
 public class FormacaoAcademicaFactory {
@@ -22,13 +20,10 @@ public class FormacaoAcademicaFactory {
             .universidade(universidade)
             .usuario(usuario)
             .descricao(faker.educator().course())
-            .dataInicio(faker.timeAndDate()
-                .past(365 * 5, TimeUnit.DAYS)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDateTime())
+            .dataInicio(faker.timeAndDate().past(365 * 5, TimeUnit.DAYS))
             .dataFim(atualFormacao
                 ? null
-                : LocalDateTime.ofInstant(faker.timeAndDate().past(365, TimeUnit.DAYS), ZoneId.systemDefault()))
+                : faker.timeAndDate().past(365, TimeUnit.DAYS))
             .atualFormacao(atualFormacao)
             .diploma(faker.bool().bool() ? faker.internet().url() : null)
             .build();

@@ -1,10 +1,7 @@
 package com.aqConnecta.DTOs.request;
 
-import com.aqConnecta.model.Universidade;
-import com.aqConnecta.model.Usuario;
 import lombok.*;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter

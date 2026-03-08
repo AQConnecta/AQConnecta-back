@@ -4,8 +4,6 @@ import com.aqConnecta.model.Experiencia;
 import com.aqConnecta.model.Usuario;
 import net.datafaker.Faker;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 
 public class ExperienciaFactory {
@@ -17,11 +15,9 @@ public class ExperienciaFactory {
             .descricao(faker.job().keySkills())
             .instituicao(faker.company().name())
             .atualExperiencia(faker.bool().bool())
-            .dataInicio(LocalDateTime.ofInstant(
-                faker.timeAndDate().past(365 * 3, TimeUnit.DAYS),
-                ZoneId.systemDefault()))
+            .dataInicio(faker.timeAndDate().past(365 * 3, TimeUnit.DAYS))
             .dataFim(faker.bool().bool()
-                ? LocalDateTime.ofInstant(faker.timeAndDate().past(), ZoneId.systemDefault())
+                ? faker.timeAndDate().past()
                 : null)
             .usuario(usuario)
             .build();

@@ -1,10 +1,9 @@
 package com.aqConnecta.DTOs.request;
 
 import com.aqConnecta.model.Universidade;
-import com.aqConnecta.model.Usuario;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -18,7 +17,7 @@ public class FormacaoAcademicaRequest {
     private Universidade universidade;
     private String descricao;
     private String diploma;
-    private LocalDateTime dataInicio;
-    private LocalDateTime dataFim;
+    private Instant dataInicio;
+    private Instant dataFim;
     private boolean atualFormacao;
 }

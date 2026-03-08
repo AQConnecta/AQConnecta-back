@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -42,16 +42,16 @@ public class Vaga implements Serializable {
     @Column(name = "ACEITA_REMOTO")
     private boolean aceitaRemoto;
     @Column(name = "DATA_LIMITE")
-    private LocalDateTime dataLimiteCandidatura;
+    private Instant dataLimiteCandidatura;
     @Column(name = "CRIADO_EM")
     @Builder.Default
-    private LocalDateTime criadoEm = LocalDateTime.now();
+    private Instant criadoEm = Instant.now();
     @Column(name = "ATUALIZADO_EM")
     @Builder.Default
-    private LocalDateTime atualizadoEm = null;
+    private Instant atualizadoEm = null;
     @Column(name = "DELETADO_EM")
     @Builder.Default
-    private LocalDateTime deletadoEm = null;
+    private Instant deletadoEm = null;
     @Column(name = "IS_INICIANTE")
     private boolean isIniciante;
 
