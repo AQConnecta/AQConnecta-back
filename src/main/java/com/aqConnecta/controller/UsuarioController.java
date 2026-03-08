@@ -136,8 +136,10 @@ public class UsuarioController {
         return service.listarCurriculo();
     }
 
+    @RequireAuth
     @GetMapping("/candidaturas")
-    public ResponseEntity<Object> listarCandidaturas() {
-        return service.listarCandidaturas();
+    public ResponseEntity<Object> listarCandidaturas(@AuthUser() Usuario usuario) {
+        final var vagas = service.listarVagasCandidatadasDoUsuario(usuario).stream().map(VagaPresenter::apresentar);
+        return ResponseHandler.generateResponse("Todos as vagas candidatadas do usuario", HttpStatus.OK, vagas);
     }
 }

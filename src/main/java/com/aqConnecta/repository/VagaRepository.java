@@ -21,4 +21,6 @@ public interface VagaRepository extends JpaRepository<Vaga, UUID>, JpaSpecificat
 
     @Query("SELECT v FROM Vaga v JOIN v.competencias c WHERE c.id = :competenciaId")
     List<Vaga> findByCompetenciaId(@Param("competenciaId") UUID competenciaId);
+
+    List<Vaga> findAllByCandidaturasUsuarioId(UUID usuarioId);
 }

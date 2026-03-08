@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
-import java.text.Normalizer;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -478,35 +478,7 @@ public class UsuarioService {
         }
     }
 
-
-    public ResponseEntity<Object> listarCandidaturas() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // Verifica se o usuário está autenticado e não é anônimo
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-            .toLowerCase()
-            .contains(
-                "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
-        try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario =
-                usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
-            List<Vaga> vagas =
-                vagaRepository.findAllById(candidaturaRepository.findAllCandidaturaByUsuarioId(usuario.getId())
-                    .stream()
-                    .map(candidatura -> candidatura.getVaga()
-                        .getId())
-                    .collect(Collectors.toList()));
-            return ResponseHandler.generateResponse("Todos as vagas candidatadas do usuario", HttpStatus.OK, vagas);
-        }
-        catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao listar as candidaturas.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
-        }
+    public List<Vaga> listarVagasCandidatadasDoUsuario(Usuario usuario) {
+        return vagaRepository.findAllByCandidaturasUsuarioId(usuario.getId());
     }
 }
