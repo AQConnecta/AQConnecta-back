@@ -14,7 +14,9 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "TB_USUARIO")
+@Table(name = "TB_USUARIO", uniqueConstraints = {
+    @UniqueConstraint(name = "tb_usuario_user_url_unique_c", columnNames = {"USER_URL"})
+})
 @Entity
 @ToString
 public class Usuario implements Serializable {
@@ -38,7 +40,7 @@ public class Usuario implements Serializable {
     @Column(name = "SENHA")
     private String senha;
 
-    @Column(name = "USER_URL")
+    @Column(name = "USER_URL", unique = true)
     private String userUrl;
 
     @ManyToMany(fetch = FetchType.EAGER)
