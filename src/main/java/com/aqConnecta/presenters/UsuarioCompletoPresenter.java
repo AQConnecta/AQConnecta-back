@@ -18,7 +18,7 @@ public record UsuarioCompletoPresenter(
     @NotNull List<FormacaoAcademicaPresenter> formacoesAcademicas,
     @NotNull Boolean deletado,
     @NotNull Boolean ativado,
-    @NotNull String fotoPerfil,
+    String fotoPerfil,
     @NotNull List<CurriculoPresenter> curriculos
 ) {
     public static UsuarioCompletoPresenter apresentar(Usuario usuario) {
