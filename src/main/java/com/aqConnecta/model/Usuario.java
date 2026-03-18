@@ -91,6 +91,7 @@ public class Usuario implements Serializable {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @JsonIgnore
+    @ToString.Exclude
     private Set<Candidatura> candidaturas = new HashSet<>();
 
     public boolean ehAdministrador() {

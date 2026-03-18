@@ -27,6 +27,7 @@ public class Experiencia implements Serializable {
     @ManyToOne
     @JoinColumn(name = "ID_USUARIO")
     @JsonBackReference // evitar recursao infinita
+    @ToString.Exclude
     private Usuario usuario;
 
     @Column(name = "TITULO")

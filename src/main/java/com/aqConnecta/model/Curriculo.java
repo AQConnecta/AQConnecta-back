@@ -25,6 +25,7 @@ public class Curriculo implements Serializable {
     @ManyToOne
     @JoinColumn(name = "USUARIO_ID", referencedColumnName = "ID")
     @JsonBackReference
+    @ToString.Exclude
     private Usuario usuario;
 
     @Column(name = "CURRICULO")

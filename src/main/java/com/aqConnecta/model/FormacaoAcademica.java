@@ -29,6 +29,7 @@ public class FormacaoAcademica implements Serializable {
     @ManyToOne(cascade = CascadeType.PERSIST, optional = false)
     @JoinColumn(name = "ID_USUARIO", nullable = false)
     @JsonBackReference
+    @ToString.Exclude
     private Usuario usuario;
 
     @ManyToOne(cascade = CascadeType.PERSIST)
