@@ -1,10 +1,12 @@
 package com.aqConnecta.presenters;
 
 import com.aqConnecta.model.Usuario;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record UsuarioCompletoPresenter(
     @NotNull String id,
     @NotNull String email,
@@ -19,7 +21,11 @@ public record UsuarioCompletoPresenter(
     @NotNull Boolean deletado,
     @NotNull Boolean ativado,
     String fotoPerfil,
-    @NotNull List<CurriculoPresenter> curriculos
+    @NotNull List<CurriculoPresenter> curriculos,
+    String telefone,
+    String curriculoLattesUrl,
+    String githubProfileUrl,
+    String linkedinProfileUrl
 ) {
     public static UsuarioCompletoPresenter apresentar(Usuario usuario) {
         return new UsuarioCompletoPresenter(
@@ -36,7 +42,11 @@ public record UsuarioCompletoPresenter(
             usuario.getDeletado(),
             usuario.getAtivado(),
             usuario.getFotoPerfil(),
-            usuario.getCurriculo().stream().map(CurriculoPresenter::apresentar).toList()
+            usuario.getCurriculo().stream().map(CurriculoPresenter::apresentar).toList(),
+            usuario.getTelefone(),
+            usuario.getCurriculoLattes() == null ? null : usuario.getCurriculoLattes().toString(),
+            usuario.getGithubProfile() == null ? null : usuario.getGithubProfile().toString(),
+            usuario.getLinkedinProfile() == null ? null : usuario.getLinkedinProfile().toString()
         );
     }
 }

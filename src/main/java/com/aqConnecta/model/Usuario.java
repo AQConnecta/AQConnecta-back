@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -15,7 +16,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "TB_USUARIO", uniqueConstraints = {
-    @UniqueConstraint(name = "tb_usuario_user_url_unique_c", columnNames = {"USER_URL"})
+    @UniqueConstraint(name = "tb_usuario_user_url_unique_c", columnNames = {"USER_URL"}),
+    @UniqueConstraint(name = "uc_tb_usuario_email", columnNames = {"EMAIL"}),
+
 })
 @Entity
 @ToString
@@ -93,6 +96,18 @@ public class Usuario implements Serializable {
     @JsonIgnore
     @ToString.Exclude
     private Set<Candidatura> candidaturas = new HashSet<>();
+
+    @Column(name = "TELEFONE", nullable = true, unique = false, length = 20)
+    private String telefone;
+
+    @Column(name = "CURRICULO_LATTES", nullable = true, unique = false)
+    private URI curriculoLattes;
+
+    @Column(name = "PERFIL_GITHUB", nullable = true, unique = false)
+    private URI githubProfile;
+
+    @Column(name = "PERFIL_LINKEDIN", nullable = true, unique = false)
+    private URI linkedinProfile;
 
     public boolean ehAdministrador() {
         return this
