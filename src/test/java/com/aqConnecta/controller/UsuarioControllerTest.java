@@ -38,7 +38,7 @@ import static org.hamcrest.Matchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @ActiveProfiles("test")
@@ -231,7 +231,7 @@ public class UsuarioControllerTest extends E2ETest {
     }
 
     @Test
-    @DisplayName("[PUT /usuario/editar] deveria atualizar os dados do usuário com sucesso (204 No Content)")
+    @DisplayName("[PATCH /usuario/editar] deveria atualizar os dados do usuário com sucesso (204 No Content)")
     void deveriaAtualizarDadosDoUsuarioComSucesso() throws Exception {
         final var dados = this.gerarDados(GerarDadosParams.builder().build());
         final var token = this.jwtUtil.generateToken(dados.usuario().getEmail());
@@ -248,7 +248,7 @@ public class UsuarioControllerTest extends E2ETest {
             """;
 
         this.mockMvc
-            .perform(put("/usuario/editar") // Assumindo que a rota base da Controller é /usuario
+            .perform(patch("/usuario/editar")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload)
@@ -260,7 +260,7 @@ public class UsuarioControllerTest extends E2ETest {
     }
 
     @Test
-    @DisplayName("[PUT /usuario/editar] deveria exigir que o usuário esteja logado (401 Unauthorized)")
+    @DisplayName("[PATCH /usuario/editar] deveria exigir que o usuário esteja logado (401 Unauthorized)")
     void deveriaExigirAutenticacaoParaEditarUsuario() throws Exception {
         final String payload = """
             {
@@ -269,7 +269,7 @@ public class UsuarioControllerTest extends E2ETest {
             """;
 
         this.mockMvc
-            .perform(put("/usuario/editar")
+            .perform(patch("/usuario/editar")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload)
                 .with(csrf())
@@ -278,7 +278,7 @@ public class UsuarioControllerTest extends E2ETest {
     }
 
     @Test
-    @DisplayName("[PUT /usuario/editar] deveria retornar Bad Request (400) caso o DTO falhe na validação")
+    @DisplayName("[PATCH /usuario/editar] deveria retornar Bad Request (400) caso o DTO falhe na validação")
     void deveriaRetornarBadRequestParaPayloadInvalido() throws Exception {
         final var dados = this.gerarDados(GerarDadosParams.builder().build());
         final var token = this.jwtUtil.generateToken(dados.usuario().getEmail());
@@ -292,7 +292,7 @@ public class UsuarioControllerTest extends E2ETest {
             """;
 
         this.mockMvc
-            .perform(put("/usuario/editar")
+            .perform(patch("/usuario/editar")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payloadInvalido)
@@ -305,7 +305,7 @@ public class UsuarioControllerTest extends E2ETest {
     }
 
     @Test
-    @DisplayName("[PUT /usuario/editar] deveria realizar atualização parcial, mantendo intactos os campos não enviados")
+    @DisplayName("[PATCH /usuario/editar] deveria realizar atualização parcial, mantendo intactos os campos não enviados")
     void deveriaManterCamposIntactosSeNaoForemEnviados() throws Exception {
         final var dados = this.gerarDados(GerarDadosParams.builder().build());
         final var usuario = dados.usuario();
@@ -327,9 +327,9 @@ public class UsuarioControllerTest extends E2ETest {
             """;
 
         this.mockMvc
-            .perform(put("/usuario/editar")
+            .perform(patch("/usuario/editar")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(payloadParcial)
                 .with(csrf()))
             .andExpect(MockMvcResultMatchers.status().isNoContent());
@@ -348,7 +348,7 @@ public class UsuarioControllerTest extends E2ETest {
     }
 
     @Test
-    @DisplayName("[PUT /usuario/editar] deveria apagar os dados se o valor for enviado explicitamente como null")
+    @DisplayName("[PATCH /usuario/editar] deveria apagar os dados se o valor for enviado explicitamente como null")
     void deveriaApagarCamposEnviadosComoNull() throws Exception {
         final var dados = this.gerarDados(GerarDadosParams.builder().build());
         final var usuario = dados.usuario();
@@ -365,9 +365,9 @@ public class UsuarioControllerTest extends E2ETest {
             """;
 
         this.mockMvc
-            .perform(put("/usuario/editar")
+            .perform(patch("/usuario/editar")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(payloadComNull)
                 .with(csrf()))
             .andExpect(MockMvcResultMatchers.status().isNoContent());

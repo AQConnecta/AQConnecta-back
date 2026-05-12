@@ -175,7 +175,7 @@ public class UsuarioController {
     }
 
     @RequireAuth
-    @PutMapping("/editar")
+    @PatchMapping("/editar")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void editarUsuario(@AuthUser() Usuario usuario, @RequestBody @Valid EditarUsuarioRequest body) {
         final var payload = new UsuarioService.PayloadAtualizacaoUsuario(
