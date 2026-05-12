@@ -45,8 +45,8 @@ public record UsuarioCompletoPresenter(
             usuario.getCurriculo().stream().map(CurriculoPresenter::apresentar).toList(),
             usuario.getTelefone(),
             usuario.getCurriculoLattes() == null ? null : usuario.getCurriculoLattes().toString(),
-            usuario.getGithubProfile() == null ? null : usuario.getGithubProfile().toString(),
-            usuario.getLinkedinProfile() == null ? null : usuario.getLinkedinProfile().toString()
+            usuario.getPerfilGitHub() == null ? null : usuario.getPerfilGitHub().toString(),
+            usuario.getPerfilLinkedin() == null ? null : usuario.getPerfilLinkedin().toString()
         );
     }
 }

@@ -104,10 +104,10 @@ public class Usuario implements Serializable {
     private URI curriculoLattes;
 
     @Column(name = "PERFIL_GITHUB", nullable = true, unique = false)
-    private URI githubProfile;
+    private URI perfilGitHub;
 
     @Column(name = "PERFIL_LINKEDIN", nullable = true, unique = false)
-    private URI linkedinProfile;
+    private URI perfilLinkedin;
 
     public boolean ehAdministrador() {
         return this
