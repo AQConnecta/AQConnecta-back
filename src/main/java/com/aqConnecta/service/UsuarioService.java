@@ -14,6 +14,7 @@ import com.aqConnecta.repository.*;
 import com.aqConnecta.utils.SlugUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.*;
@@ -482,5 +484,31 @@ public class UsuarioService {
 
     public List<Vaga> listarVagasCandidatadasDoUsuario(Usuario usuario) {
         return vagaRepository.findAllByCandidaturasUsuarioId(usuario.getId());
+    }
+
+    public record PayloadAtualizacaoUsuario(
+        String nome,
+        JsonNullable<String> descricao,
+        JsonNullable<String> telefone,
+        JsonNullable<URI> curriculoLattes,
+        JsonNullable<URI> perfilGitHub,
+        JsonNullable<URI> perfilLinkedin
+    ) {
+    }
+
+    public Usuario editarUsuario(Usuario alvo, PayloadAtualizacaoUsuario payload) {
+        // se não tiver presente, quer dizer que o usuário não teve a intenção de alterar esse campo
+        // se estiver presente, pode ser um valor real ou `null`, sugerindo que deve-se remover o
+        // atual valor.
+
+        if (payload.nome != null) alvo.setNome(payload.nome);
+        
+        payload.descricao.ifPresent(alvo::setDescricao);
+        payload.telefone.ifPresent(alvo::setTelefone);
+        payload.curriculoLattes.ifPresent(alvo::setCurriculoLattes);
+        payload.perfilGitHub.ifPresent(alvo::setPerfilGitHub);
+        payload.perfilLinkedin.ifPresent(alvo::setPerfilLinkedin);
+
+        return this.usuarioRepository.save(alvo);
     }
 }

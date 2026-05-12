@@ -1,5 +1,6 @@
 package com.aqConnecta.controller;
 
+import com.aqConnecta.DTOs.request.EditarUsuarioRequest;
 import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.DTOs.request.RegistroRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
@@ -10,6 +11,7 @@ import com.aqConnecta.security.AuthUser;
 import com.aqConnecta.security.JWTUtil;
 import com.aqConnecta.security.RequireAuth;
 import com.aqConnecta.service.UsuarioService;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URI;
 import java.util.UUID;
 
 @RestController
@@ -169,5 +172,21 @@ public class UsuarioController {
     public ResponseEntity<Object> listarCandidaturas(@AuthUser() Usuario usuario) {
         final var vagas = service.listarVagasCandidatadasDoUsuario(usuario).stream().map(VagaPresenter::apresentar);
         return ResponseHandler.generateResponse("Todos as vagas candidatadas do usuario", HttpStatus.OK, vagas);
+    }
+
+    @RequireAuth
+    @PutMapping("/editar")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void editarUsuario(@AuthUser() Usuario usuario, @RequestBody @Valid EditarUsuarioRequest body) {
+        final var payload = new UsuarioService.PayloadAtualizacaoUsuario(
+            body.getNome(),
+            body.getDescricao(),
+            body.getTelefone(),
+            body.getCurriculoLattes().map(url -> url == null ? null : URI.create(url)),
+            body.getPerfilGitHub().map(url -> url == null ? null : URI.create(url)),
+            body.getPerfilLinkedin().map(url -> url == null ? null : URI.create(url))
+        );
+
+        this.service.editarUsuario(usuario, payload);
     }
 }
