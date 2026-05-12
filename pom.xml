@@ -158,7 +158,28 @@
                     <release>21</release>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>9.16.3</version>
+                <configuration>
+                    <configFiles>
+                        <configFile>src/main/resources/application-dev.properties</configFile>
+                    </configFiles>
+                    <locations>
+                        <location>filesystem:src/main/resources/db/migration</location>
+                    </locations>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.mariadb.jdbc</groupId>
+                        <artifactId>mariadb-java-client</artifactId>
+                        <version>3.1.4</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
         </plugins>
     </build>
+
 
 </project>
