@@ -2,6 +2,7 @@ package com.aqConnecta.exception;
 
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.exception.base.AcaoProibidaException;
+import com.aqConnecta.exception.base.ErroInternoDoServidorException;
 import com.aqConnecta.exception.base.NaoAutorizadoException;
 import com.aqConnecta.exception.base.RecursoNaoEncontradoException;
 import com.aqConnecta.exception.vagas.JaSeCandidatouParaVagaException;
@@ -64,11 +65,21 @@ public class GlobalExceptionsHandler {
         );
     }
 
+    @ExceptionHandler(ErroInternoDoServidorException.class)
+    public ResponseEntity<?> handleInternalServerException(ErroInternoDoServidorException ex) {
+        if (ex.getCause() != null) {
+            var cause = ex.getCause();
+            log.error("Erro do servidor contém o seguinte erro interno: '{}'.", cause.getMessage(), cause);
+        }
+
+        return ResponseHandler.generateResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleUncaughtException(Exception ex) {
         log.error("Erro não tratado: '{}'.", ex.getMessage(), ex);
 
-        return ResponseHandler.generateResponse("Houve um problema no nosso servidor. Tente novamente mais tarde.",
+        return ResponseHandler.generateResponse(new ErroInternoDoServidorException().getMessage(),
             HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
