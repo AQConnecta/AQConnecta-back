@@ -12,4 +12,6 @@ import java.util.UUID;
 public interface FormacaoAcademicaRepository extends JpaRepository<FormacaoAcademica, UUID> {
 
     Set<FormacaoAcademica> findByUsuario(Usuario usuario);
+
+    void deleteFormacaoAcademicaByIdAndUsuarioId(UUID idFormacaoAcademica, UUID idUsuario);
 }

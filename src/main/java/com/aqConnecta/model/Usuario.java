@@ -72,7 +72,11 @@ public class Usuario implements Serializable {
     @Builder.Default
     private Set<Experiencia> experiencias = new HashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario", cascade = CascadeType.ALL)
+    // excluir essas coisas pra evitar que sejam carregadas diante de um print ou hash
+    // visto que tá pra ser buscada com o padrão FetchType.Lazy
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<FormacaoAcademica> formacoesAcademicas = new HashSet<>();
 

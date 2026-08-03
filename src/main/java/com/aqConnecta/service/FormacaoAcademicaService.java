@@ -2,9 +2,11 @@ package com.aqConnecta.service;
 
 import com.aqConnecta.DTOs.request.FormacaoAcademicaRequest;
 import com.aqConnecta.DTOs.response.ResponseHandler;
+import com.aqConnecta.exception.base.ErroInternoDoServidorException;
 import com.aqConnecta.model.FormacaoAcademica;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.repository.FormacaoAcademicaRepository;
+import com.aqConnecta.repository.UsuarioRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.Set;
@@ -26,6 +29,9 @@ public class FormacaoAcademicaService {
 
     @Autowired
     private FormacaoAcademicaRepository formacaoAcademicaRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     public ResponseEntity<Object> cadastrarFormacaoAcademica(FormacaoAcademicaRequest registro) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -48,6 +54,8 @@ public class FormacaoAcademicaService {
                 formacaoAcademica.setDataFim(registro.getDataFim());
             }
             formacaoAcademica.setAtualFormacao(registro.isAtualFormacao());
+            // pode dar erro se não existir uma universidade com o ID fornecido, e é um erro
+            // tratável...
             formacaoAcademicaRepository.save(formacaoAcademica);
             return ResponseHandler.generateResponse("Formação academica cadastrada com súcesso!",
                 HttpStatus.CREATED,
@@ -152,37 +160,18 @@ public class FormacaoAcademicaService {
         }
     }
 
-
-    public ResponseEntity<Object> deletarFormacaoAcademica(UUID idFormacaoAcademica) {
+    @Transactional
+    public void deletarFormacaoAcademica(UUID idFormacaoAcademica, Usuario usuario) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-                .toLowerCase()
-                .contains("anonymous")) {
-                return ResponseHandler.generateResponse("Precisa estar logado para continuar.",
-                    HttpStatus.UNAUTHORIZED);
-            }
-            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-            Optional<FormacaoAcademica> formacaoAcademica = formacaoAcademicaRepository.findById(idFormacaoAcademica);
-            if (formacaoAcademica.isPresent()) {
-                if (!formacaoAcademica.get().getUsuario().getId().equals(usuario.getId())) {
-                    return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.",
-                        HttpStatus.FORBIDDEN);
-                }
-                formacaoAcademicaRepository.deleteById(idFormacaoAcademica);
-            }
-            else {
-                return ResponseHandler.generateResponse(
-                    "Não é possível excluir uma formação academica que não existente.",
-                    HttpStatus.NOT_FOUND);
-            }
-            return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
+            // ignora silenciosamente casos onde:
+            // * formação não existe (idempotência); ou
+            // * formação não pertence a esse usuário (ele não precisa ser informado que não lhe pertence,
+            //   pois provavelmente está tentando acessar um recurso de outro usuário indevidamente).
+            formacaoAcademicaRepository.deleteFormacaoAcademicaByIdAndUsuarioId(idFormacaoAcademica, usuario.getId());
         }
-        catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar excluir a formação academica.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
+        catch (Exception exception) {
+            final var errorMessage = "Não foi possível excluir a formação acadêmica devido a problemas no servidor.";
+            throw new ErroInternoDoServidorException(errorMessage, exception);
         }
     }
 
