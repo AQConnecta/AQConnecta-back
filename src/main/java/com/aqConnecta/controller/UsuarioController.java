@@ -68,7 +68,7 @@ public class UsuarioController {
         return ResponseHandler.generateResponse("Usuário encontrado!", HttpStatus.OK, usuarioApresentado);
     }
 
-    @Deprecated(forRemoval = true, since = "Utilizar o endpoint")
+    @Deprecated(forRemoval = true)
     @GetMapping("/{userUrl}")
     public ResponseEntity<Object> localizarPorUrl(@PathVariable String userUrl) {
         return service.localizarPorUrl(userUrl);

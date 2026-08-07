@@ -32,6 +32,8 @@ public class ExperienciaController {
         return service.cadastrarExperiencia(experienciaRequest);
     }
 
+    // usar o endpoint /usuario/editar
+    @Deprecated(forRemoval = true)
     @PostMapping("/cadastrar_desc_usuario")
     public ResponseEntity<Object> cadastrarDescricaoUsuario(@RequestBody UsuarioRequest usuarioRequest) {
         return service.cadastrarDescricaoUsuario(usuarioRequest);

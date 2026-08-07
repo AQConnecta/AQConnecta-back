@@ -72,6 +72,8 @@ public class ExperienciaService {
         }
     }
 
+    // utilizar o service de editar usuário
+    @Deprecated(forRemoval = true)
     public ResponseEntity<Object> cadastrarDescricaoUsuario(UsuarioRequest usuarioRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // TODO remover essa bosta de contains dps do riume arrumar o security
