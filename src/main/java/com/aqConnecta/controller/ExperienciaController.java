@@ -2,12 +2,17 @@ package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.ExperienciaRequest;
 import com.aqConnecta.DTOs.request.UsuarioRequest;
+import com.aqConnecta.DTOs.response.ResponseHandler;
+import com.aqConnecta.presenters.ExperienciaPresenter;
+import com.aqConnecta.security.RequireAuth;
 import com.aqConnecta.service.ExperienciaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -32,9 +37,16 @@ public class ExperienciaController {
         return service.cadastrarDescricaoUsuario(usuarioRequest);
     }
 
+    @RequireAuth
     @GetMapping("/listar/{idUsuario}")
     public ResponseEntity<Object> listarExperienciasPorUsuario(@PathVariable UUID idUsuario) {
-        return service.listarExperienciasPorUsuario(idUsuario);
+        final List<ExperienciaPresenter> experiencias = service
+            .listarExperienciasPorUsuario(idUsuario)
+            .stream()
+            .map(ExperienciaPresenter::apresentar)
+            .toList();
+
+        return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, experiencias);
     }
 
     @GetMapping("/localizar/{idExperiencia}")
@@ -43,7 +55,8 @@ public class ExperienciaController {
     }
 
     @PutMapping("/alterar/{idExperiencia}")
-    public ResponseEntity<Object> alterarExperiencia(@PathVariable UUID idExperiencia, @RequestBody ExperienciaRequest experienciaRequest) {
+    public ResponseEntity<Object> alterarExperiencia(@PathVariable UUID idExperiencia,
+        @RequestBody ExperienciaRequest experienciaRequest) {
         return service.alterarExperiencia(idExperiencia, experienciaRequest);
     }
 
