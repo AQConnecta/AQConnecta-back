@@ -55,7 +55,9 @@ public class Usuario implements Serializable {
     @Builder.Default
     private Set<Permissao> permissao = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinTable(
         name = "RL_USUARIO_COMPETENCIA",
         joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
@@ -64,11 +66,15 @@ public class Usuario implements Serializable {
     @Builder.Default
     private Set<Competencia> competencias = new HashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL)
     @Builder.Default
     private Set<Endereco> enderecos = new HashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL)
     @Builder.Default
     private Set<Experiencia> experiencias = new HashSet<>();
 
@@ -91,14 +97,17 @@ public class Usuario implements Serializable {
     @Column(name = "FOTO_PERFIL")
     private String fotoPerfil;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL)
     @Builder.Default
     private Set<Curriculo> curriculo = new HashSet<>();
 
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @JsonIgnore
-    @ToString.Exclude
     private Set<Candidatura> candidaturas = new HashSet<>();
 
     @Column(name = "TELEFONE", nullable = true, unique = false, length = 20)
