@@ -18,7 +18,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
         "permissao",
         "competencias",
         "enderecos",
-        "experiencias",
         "formacoesAcademicas",
         "curriculo"
     })
