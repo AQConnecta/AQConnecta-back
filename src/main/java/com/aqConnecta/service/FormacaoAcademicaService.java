@@ -141,13 +141,6 @@ public class FormacaoAcademicaService {
                     .dataFim(registro.getDataFim())
                     .atualFormacao(registro.isAtualFormacao())
                     .build();
-                if (registro.getDataFim() != null) {
-                    formacaoAcademicaAlterada.setDataFim(registro.getDataFim());
-                }
-                // TODO verificar porque da dando ruim se nao passar ele indo pra false de qualuqer jeito tmj
-                if (formacaoAcademica.get().getAtualFormacao() != registro.isAtualFormacao()) {
-                    formacaoAcademicaAlterada.setAtualFormacao(registro.isAtualFormacao());
-                }
                 formacaoAcademicaRepository.save(formacaoAcademicaAlterada);
                 return ResponseHandler.generateResponse("Formação academica atualizada com súcesso!",
                     HttpStatus.CREATED,
