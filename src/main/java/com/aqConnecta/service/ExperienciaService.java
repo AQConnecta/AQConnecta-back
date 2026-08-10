@@ -122,52 +122,43 @@ public class ExperienciaService {
 
 
     public ResponseEntity<Object> alterarExperiencia(UUID idExperiencia, ExperienciaRequest registro) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-                .toLowerCase()
-                .contains("anonymous")) {
-                return ResponseHandler.generateResponse("Precisa estar logado para continuar.",
-                    HttpStatus.UNAUTHORIZED);
-            }
-            if (!registro.validarDadosObrigatorios() && idExperiencia != null && !idExperiencia.toString().isEmpty()) {
-                return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados",
-                    HttpStatus.BAD_REQUEST);
-            }
-            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-            Optional<Experiencia> experiencia = experienciaRepository.findById(idExperiencia);
-            if (experiencia.isPresent()) {
-                if (!experiencia.get().getUsuario().getId().equals(usuario.getId())) {
-                    return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.",
-                        HttpStatus.UNAUTHORIZED);
-                }
-                new Experiencia();
-                Experiencia experienciaAlterada = Experiencia.builder()
-                    .id(idExperiencia)
-                    .usuario(experiencia.get().getUsuario())
-                    .titulo(registro.getTitulo())
-                    .instituicao(registro.getInstituicao())
-                    .descricao(registro.getDescricao())
-                    .dataInicio(registro.getDataInicio())
-                    .build();
-                if (registro.getDataFim() != null) {
-                    experienciaAlterada.setDataFim(registro.getDataFim());
-                }
-                // TODO verificar porque da dando ruim se nao passar ele indo pra false de qualuqer jeito tmj
-                if (experiencia.get().isAtualExperiencia() != registro.isAtualExperiencia()) {
-                    experienciaAlterada.setAtualExperiencia(registro.isAtualExperiencia());
-                }
-                experienciaRepository.save(experienciaAlterada);
-                return ResponseHandler.generateResponse("Experiencia atualizada com súcesso!",
-                    HttpStatus.CREATED,
-                    experiencia);
-            }
-            return ResponseHandler.generateResponse("Erro ao encontrar a experiencia!", HttpStatus.NOT_FOUND);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // TODO remover essa bosta de contains dps do riume arrumar o security
+        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
+            .toLowerCase()
+            .contains("anonymous")) {
+            return ResponseHandler.generateResponse("Precisa estar logado para continuar.",
+                HttpStatus.UNAUTHORIZED);
         }
-        catch (Exception e) {
-            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
+        if (!registro.validarDadosObrigatorios() && idExperiencia != null && !idExperiencia.toString().isEmpty()) {
+            return ResponseHandler.generateResponse("Campos obrigatórios não informados",
+                HttpStatus.BAD_REQUEST);
         }
+        Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+        Optional<Experiencia> experiencia = experienciaRepository.findById(idExperiencia);
+        if (experiencia.isEmpty()) {
+            return ResponseHandler.generateResponse("Não foi possível encontrar essa experiência no sistema.",
+                HttpStatus.NOT_FOUND);
+        }
+        final var belongsToAuthUser = experiencia.get().getUsuario().getId().equals(usuario.getId());
+        if (!belongsToAuthUser) {
+            return ResponseHandler.generateResponse("Você não tem permissão para alterar essa experiência.",
+                HttpStatus.UNAUTHORIZED);
+        }
+        Experiencia experienciaAlterada = Experiencia.builder()
+            .id(idExperiencia)
+            .usuario(experiencia.get().getUsuario())
+            .titulo(registro.getTitulo())
+            .instituicao(registro.getInstituicao())
+            .descricao(registro.getDescricao())
+            .dataInicio(registro.getDataInicio())
+            .atualExperiencia(registro.isAtualExperiencia())
+            .dataFim(registro.getDataFim())
+            .build();
+        experienciaRepository.save(experienciaAlterada);
+        return ResponseHandler.generateResponse("Experiência atualizada com sucesso!",
+            HttpStatus.CREATED,
+            experiencia);
     }
 
 
