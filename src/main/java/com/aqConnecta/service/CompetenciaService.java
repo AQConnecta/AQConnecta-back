@@ -3,7 +3,6 @@ package com.aqConnecta.service;
 import com.aqConnecta.DTOs.request.CompetenciaRequest;
 import com.aqConnecta.DTOs.request.CompetenciaUsuarioRequest;
 import com.aqConnecta.DTOs.request.CompetenciaVagaRequest;
-import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.DTOs.response.CompetenciaCountDTO;
 import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.model.Competencia;
@@ -25,7 +24,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -52,20 +54,27 @@ public class CompetenciaService {
         try {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
             if (usuario.verificarUsuarioNaoEAdministrador()) {
-                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.", HttpStatus.FORBIDDEN);
+                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.",
+                    HttpStatus.FORBIDDEN);
             }
-            Competencia competencia = new Competencia().builder()
-                    .id(UUID.randomUUID())
-                    .descricao(registro.getDescricao())
-                    .build();
+            Competencia competencia = Competencia.builder()
+                .id(UUID.randomUUID())
+                .descricao(registro.getDescricao())
+                .build();
 
             if (!competenciaRepository.findByDescricaoIgnoreCase(registro.getDescricao()).isEmpty()) {
-                return ResponseHandler.generateResponse("Essa competencia ja existe!", HttpStatus.CONFLICT, competencia);
+                return ResponseHandler.generateResponse("Essa competencia ja existe!",
+                    HttpStatus.CONFLICT,
+                    competencia);
             }
             competenciaRepository.save(competencia);
-            return ResponseHandler.generateResponse("Competencia cadastrada com súcesso!", HttpStatus.CREATED, competencia);
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseHandler.generateResponse("Competencia cadastrada com súcesso!",
+                HttpStatus.CREATED,
+                competencia);
+        }
+        catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()),
+                HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -78,22 +87,29 @@ public class CompetenciaService {
         try {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
             if (usuario.verificarUsuarioNaoEAdministrador()) {
-                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.", HttpStatus.FORBIDDEN);
+                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.",
+                    HttpStatus.FORBIDDEN);
             }
             Optional<Competencia> competencia = competenciaRepository.findById(idCompetencia);
             if (competencia.isPresent()) {
-                Competencia competenciaAlterada = new Competencia().builder()
-                        .id(registro.getId())
-                        .descricao(registro.getDescricao())
-                        .build();
+                Competencia competenciaAlterada = Competencia.builder()
+                    .id(registro.getId())
+                    .descricao(registro.getDescricao())
+                    .build();
                 if (!competenciaRepository.findByDescricaoIgnoreCase(registro.getDescricao()).isEmpty()) {
-                    return ResponseHandler.generateResponse("Essa competencia ja existe!", HttpStatus.CONFLICT, competencia);
+                    return ResponseHandler.generateResponse("Essa competencia ja existe!",
+                        HttpStatus.CONFLICT,
+                        competencia);
                 }
                 competenciaRepository.save(competenciaAlterada);
             }
-            return ResponseHandler.generateResponse("Competencia cadastrada com súcesso!", HttpStatus.CREATED, competencia);
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseHandler.generateResponse("Competencia cadastrada com súcesso!",
+                HttpStatus.CREATED,
+                competencia);
+        }
+        catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()),
+                HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -106,7 +122,8 @@ public class CompetenciaService {
         try {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
             if (usuario.verificarUsuarioNaoEAdministrador()) {
-                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.", HttpStatus.FORBIDDEN);
+                return ResponseHandler.generateResponse("Você não tem permissão para cadastrar uma competencia.",
+                    HttpStatus.FORBIDDEN);
             }
             Optional<Competencia> competencia = competenciaRepository.findById(idCompetencia);
             if (competencia.isPresent()) {
@@ -115,8 +132,10 @@ public class CompetenciaService {
                 competenciaRepository.deleteCompetencia(competencia.get().getId());
             }
             return ResponseHandler.generateResponse("Competencia deletada com súcesso!", HttpStatus.OK);
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        catch (Exception e) {
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()),
+                HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -127,7 +146,8 @@ public class CompetenciaService {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         if (registro.validarDadosObrigatorios()) {
-            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
+            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados",
+                HttpStatus.BAD_REQUEST);
         }
         try {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
@@ -138,8 +158,11 @@ public class CompetenciaService {
                 usuario.getCompetencias().add(competencia);
             }
             usuarioRepository.save(usuario);
-            return ResponseHandler.generateResponse("Competencias relacionadas com sucesso!", HttpStatus.CREATED, usuario.getCompetencias());
-        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Competencias relacionadas com sucesso!",
+                HttpStatus.CREATED,
+                usuario.getCompetencias());
+        }
+        catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
         }
     }
@@ -152,7 +175,8 @@ public class CompetenciaService {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         if (registro.validarDadosObrigatorios()) {
-            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
+            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados",
+                HttpStatus.BAD_REQUEST);
         }
         try {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
@@ -160,10 +184,13 @@ public class CompetenciaService {
                 return ResponseHandler.generateResponse("Usuário não possuí competencias.", HttpStatus.OK);
             }
             usuario.getCompetencias().removeIf(competencia ->
-                    registro.getCompetencias().contains(competencia));
+                registro.getCompetencias().contains(competencia));
             usuarioRepository.save(usuario);
-            return ResponseHandler.generateResponse("Competencias removidas com sucesso!", HttpStatus.CREATED, usuario.getCompetencias());
-        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Competencias removidas com sucesso!",
+                HttpStatus.CREATED,
+                usuario.getCompetencias());
+        }
+        catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
         }
     }
@@ -178,11 +205,17 @@ public class CompetenciaService {
         try {
             Usuario usuario = usuarioService.localizar(idUsuario);
             if (!Collections.isEmpty(usuario.getCompetencias())) {
-                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, usuario.getCompetencias());
+                return ResponseHandler.generateResponse("Listagem feita com sucesso!",
+                    HttpStatus.OK,
+                    usuario.getCompetencias());
             }
-            return ResponseHandler.generateResponse("Nenhuma competencia encontrada para este usuário.", HttpStatus.NO_CONTENT);
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return ResponseHandler.generateResponse("Nenhuma competencia encontrada para este usuário.",
+                HttpStatus.NO_CONTENT);
+        }
+        catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.",
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                e.getMessage());
         }
     }
 
@@ -194,13 +227,16 @@ public class CompetenciaService {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         if (registro.validarDadosObrigatorios()) {
-            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
+            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados",
+                HttpStatus.BAD_REQUEST);
         }
         try {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
             Vaga vaga = vagaService.localizar(registro.getIdVaga());
             if (!usuario.getId().equals(vaga.getPublicador().getId())) {
-                return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar uma vaga que não é sua", HttpStatus.BAD_REQUEST);
+                return ResponseHandler.generateResponse(
+                    "Error: Você não tem permissão para alterar uma vaga que não é sua",
+                    HttpStatus.BAD_REQUEST);
             }
 
             if (vaga.getCompetencias() == null) {
@@ -211,8 +247,11 @@ public class CompetenciaService {
                 vaga.getCompetencias().add(competencia);
             }
             vagaRepository.save(vaga);
-            return ResponseHandler.generateResponse("Competencias relacionadas com sucesso!", HttpStatus.CREATED, vaga.getCompetencias());
-        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Competencias relacionadas com sucesso!",
+                HttpStatus.CREATED,
+                vaga.getCompetencias());
+        }
+        catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
         }
     }
@@ -225,14 +264,17 @@ public class CompetenciaService {
             return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
         }
         if (registro.validarDadosObrigatorios()) {
-            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
+            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados",
+                HttpStatus.BAD_REQUEST);
         }
         try {
             Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
             Vaga vaga = vagaService.localizar(registro.getIdVaga());
 
             if (!usuario.getId().equals(vaga.getPublicador().getId())) {
-                return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar uma vaga que não é sua", HttpStatus.BAD_REQUEST);
+                return ResponseHandler.generateResponse(
+                    "Error: Você não tem permissão para alterar uma vaga que não é sua",
+                    HttpStatus.BAD_REQUEST);
             }
 
             if (vaga.getCompetencias() == null) {
@@ -240,10 +282,13 @@ public class CompetenciaService {
             }
 
             vaga.getCompetencias().removeIf(competencia ->
-                    registro.getCompetencias().contains(competencia));
+                registro.getCompetencias().contains(competencia));
             vagaRepository.save(vaga);
-            return ResponseHandler.generateResponse("Competencias removidas com sucesso!", HttpStatus.CREATED, vaga.getCompetencias());
-        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Competencias removidas com sucesso!",
+                HttpStatus.CREATED,
+                vaga.getCompetencias());
+        }
+        catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
         }
     }
@@ -258,11 +303,17 @@ public class CompetenciaService {
         try {
             Vaga vaga = vagaService.localizar(idVaga);
             if (!Collections.isEmpty(vaga.getCompetencias())) {
-                return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, vaga.getCompetencias());
+                return ResponseHandler.generateResponse("Listagem feita com sucesso!",
+                    HttpStatus.OK,
+                    vaga.getCompetencias());
             }
-            return ResponseHandler.generateResponse("Nenhuma competencia encontrada para esta vaga.", HttpStatus.NO_CONTENT);
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias da vaga.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return ResponseHandler.generateResponse("Nenhuma competencia encontrada para esta vaga.",
+                HttpStatus.NO_CONTENT);
+        }
+        catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias da vaga.",
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                e.getMessage());
         }
     }
 
@@ -270,21 +321,28 @@ public class CompetenciaService {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+            if (authentication != null && authentication.isAuthenticated() && authentication.getName()
+                .toLowerCase()
+                .contains("anonymous")) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.",
+                    HttpStatus.UNAUTHORIZED);
             }
             Pageable pageable = PageRequest.of(page, size);
             Page<Competencia> competenciaPage;
 
             if (search.isEmpty()) {
                 competenciaPage = competenciaRepository.findAll(pageable);
-            } else {
+            }
+            else {
                 competenciaPage = competenciaRepository.findByDescricaoContainingIgnoreCase(search, pageable);
             }
 
-            return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, competenciaPage.getContent());
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, competenciaPage);
+        }
+        catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.",
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                e.getMessage());
         }
     }
 
@@ -299,23 +357,29 @@ public class CompetenciaService {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+            if (authentication != null && authentication.isAuthenticated() && authentication.getName()
+                .toLowerCase()
+                .contains("anonymous")) {
+                return ResponseHandler.generateResponse("Precisa estar logado para continuar.",
+                    HttpStatus.UNAUTHORIZED);
             }
             List<Object[]> results = competenciaRepository.countCompetenciasInVagas();
             List<CompetenciaCountDTO> competenciaCountDTOS =
-                    results.stream()
-                            .map(result -> new CompetenciaCountDTO(
-                                    new Competencia(UUID.fromString(new String((byte[]) result[0])), result[1].toString()),
-                                    ((Number) result[2]).longValue()
-                            ))
-                            .toList();
+                results.stream()
+                    .map(result -> new CompetenciaCountDTO(
+                        new Competencia(UUID.fromString(new String((byte[]) result[0])), result[1].toString()),
+                        ((Number) result[2]).longValue()
+                    ))
+                    .toList();
 
             assignLevels(competenciaCountDTOS);
 
             return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, competenciaCountDTOS);
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+        catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao tentar listar as competencias do usuário.",
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                e.getMessage());
         }
     }
 
@@ -331,19 +395,24 @@ public class CompetenciaService {
     private Long calculateLevel(double percentage) {
         if (percentage < 25) {
             return 0L;
-        } else if (percentage < 50) {
+        }
+        else if (percentage < 50) {
             return 1L;
-        } else if (percentage < 75) {
+        }
+        else if (percentage < 75) {
             return 2L;
-        } else if (percentage < 90) {
+        }
+        else if (percentage < 90) {
             return 3L;
-        } else {
+        }
+        else {
             return 4L;
         }
     }
 
     private boolean isUserAnonymous(Authentication authentication) {
-        return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
+        return authentication == null || !authentication.isAuthenticated()
+               || "anonymousUser".equals(authentication.getName());
     }
 
 
