@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -27,6 +26,7 @@ public class Endereco implements Serializable {
     @ManyToOne
     @JoinColumn(name = "ID_USUARIO")
     @JsonBackReference // evitar recursao infinita
+    @ToString.Exclude
     private Usuario usuario;
 
     @Column(name = "CEP")

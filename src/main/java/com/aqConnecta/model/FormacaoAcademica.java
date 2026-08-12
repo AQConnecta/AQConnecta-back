@@ -1,12 +1,11 @@
 package com.aqConnecta.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -25,23 +24,34 @@ public class FormacaoAcademica implements Serializable {
     @Column(name = "ID")
     private UUID id;
 
-    @ManyToOne
-    @JoinColumn(name = "ID_USUARIO")
-    @JsonBackReference // evitar recursao infinita
+    // TODO: fazer essa coluna ser non nullable. Hoje, com ela podendo ser nula, o sistema pode começar
+    // a abrigar registros orfãos (adicionar optional = false no @ManyToOne e nullable = false no @JoinColumn)
+    @ManyToOne(cascade = CascadeType.PERSIST, optional = false)
+    @JoinColumn(name = "ID_USUARIO", nullable = false)
+    @JsonBackReference
+    @ToString.Exclude
     private Usuario usuario;
-    @OneToOne
-    @JoinColumn(name = "ID_UNIVERSIDADE")
-//    @JsonManagedReference // evitar recursao infinita
+
+    @ManyToOne(cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "ID_UNIVERSIDADE", nullable = false)
     private Universidade universidade;
+
     @Column(name = "DESCRICAO")
     private String descricao;
+
     @Column(name = "DIPLOMA")
     private String diploma;
+
     @Column(name = "DATA_INICIO")
-    private LocalDateTime dataInicio;
+    private Instant dataInicio;
+
     @Column(name = "DATA_FIM")
-    private LocalDateTime dataFim;
-    @Column(name = "ATUAL_FORMACAO")
-    private boolean atualFormacao;
+    private Instant dataFim;
+
+    // TODO: fazer este campo ser non nullable e mudar o tipo de volta para `boolean` (primitivo)
+    // como atualmente é nullable no DB, o tipo primitivo poderia ocasionar um `NullPointerException`
+    // totalmente inesperado
+    @Column(name = "ATUAL_FORMACAO", nullable = false)
+    private Boolean atualFormacao = false;
 
 }

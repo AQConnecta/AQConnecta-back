@@ -2,22 +2,23 @@ package com.aqConnecta.presenters;
 
 import com.aqConnecta.model.Competencia;
 import com.aqConnecta.model.Vaga;
+import jakarta.validation.constraints.NotNull;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Set;
 
 public record VagaPresenter(
-    String id,
+    @NotNull String id,
     UsuarioAutorPresenter publicador,
-    String titulo,
-    String descricao,
-    String localDaVaga,
-    boolean aceitaRemoto,
-    LocalDateTime dataLimiteCandidatura,
+    @NotNull String titulo,
+    @NotNull String descricao,
+    @NotNull String localDaVaga,
+    @NotNull boolean aceitaRemoto,
+    Instant dataLimiteCandidatura,
     Set<Competencia> competencias,
-    LocalDateTime criadoEm,
-    LocalDateTime atualizadoEm,
-    boolean isIniciante
+    Instant criadoEm,
+    Instant atualizadoEm,
+    @NotNull boolean isIniciante
 ) {
     public static VagaPresenter apresentar(Vaga vaga) {
         return new VagaPresenter(

@@ -21,7 +21,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 
-import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -33,8 +33,6 @@ public class SecurityConfig {
     @Autowired
     private UserDetailsService userDetailsService;
 
-    private final String[] WHITELIST = {"/auth/**"};
-
     @Value("${cors.urls:*}")
     private String corsUrls;
 
@@ -45,17 +43,18 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(request -> {
             CorsConfiguration configuration = new CorsConfiguration();
             configuration.applyPermitDefaultValues();
-            configuration.setAllowedOrigins(Arrays.asList(corsUrls.split(",")));
+            configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+            configuration.setAllowedOrigins(List.of(corsUrls.split(",")));
             configuration.setAllowCredentials(!corsUrls.equals("*"));
             return configuration;
         }));
         http.addFilter(new JWTAuthenticationFilter(authenticationManager, jwtUtil));
         http.addFilter(new JWTAuthorizationFilter(authenticationManager, jwtUtil, userDetailsService));
         http.authorizeHttpRequests(requests -> requests
-            .requestMatchers(
-                AntPathRequestMatcher.antMatcher(HttpMethod.OPTIONS, Arrays.toString(WHITELIST))
-            ).authenticated()
-            .anyRequest().permitAll());
+            .requestMatchers(AntPathRequestMatcher.antMatcher(HttpMethod.OPTIONS, "/**"))
+            .permitAll()
+            .anyRequest()
+            .permitAll());
 
         return http.build();
     }

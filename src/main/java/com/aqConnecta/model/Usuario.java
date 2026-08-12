@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -14,7 +15,11 @@ import java.util.UUID;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "TB_USUARIO")
+@Table(name = "TB_USUARIO", uniqueConstraints = {
+    @UniqueConstraint(name = "tb_usuario_user_url_unique_c", columnNames = {"USER_URL"}),
+    @UniqueConstraint(name = "uc_tb_usuario_email", columnNames = {"EMAIL"}),
+
+})
 @Entity
 @ToString
 public class Usuario implements Serializable {
@@ -38,7 +43,7 @@ public class Usuario implements Serializable {
     @Column(name = "SENHA")
     private String senha;
 
-    @Column(name = "USER_URL")
+    @Column(name = "USER_URL", unique = true)
     private String userUrl;
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -47,27 +52,38 @@ public class Usuario implements Serializable {
         joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
         inverseJoinColumns = @JoinColumn(name = "ID_PERMISSAO", referencedColumnName = "ID")
     )
+    @Builder.Default
     private Set<Permissao> permissao = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinTable(
         name = "RL_USUARIO_COMPETENCIA",
         joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
         inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
     )
-//	@JsonManagedReference
+    @Builder.Default
     private Set<Competencia> competencias = new HashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-//	@JsonManagedReference // evitar recursao infinita
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL)
+    @Builder.Default
     private Set<Endereco> enderecos = new HashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-//	@JsonManagedReference // evitar recursao infinita
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL)
+    @Builder.Default
     private Set<Experiencia> experiencias = new HashSet<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-//	@JsonManagedReference // evitar recursao infinita
+    // excluir essas coisas pra evitar que sejam carregadas diante de um print ou hash
+    // visto que tá pra ser buscada com o padrão FetchType.Lazy
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<FormacaoAcademica> formacoesAcademicas = new HashSet<>();
 
     @Builder.Default
@@ -81,12 +97,30 @@ public class Usuario implements Serializable {
     @Column(name = "FOTO_PERFIL")
     private String fotoPerfil;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-//	@JsonManagedReference // evitar recursão infinita
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL)
+    @Builder.Default
     private Set<Curriculo> curriculo = new HashSet<>();
 
-//	@OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
-//	private Set<Candidatura> candidaturas = new HashSet<>();
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @JsonIgnore
+    private Set<Candidatura> candidaturas = new HashSet<>();
+
+    @Column(name = "TELEFONE", nullable = true, unique = false, length = 20)
+    private String telefone;
+
+    @Column(name = "CURRICULO_LATTES", nullable = true, unique = false)
+    private URI curriculoLattes;
+
+    @Column(name = "PERFIL_GITHUB", nullable = true, unique = false)
+    private URI perfilGitHub;
+
+    @Column(name = "PERFIL_LINKEDIN", nullable = true, unique = false)
+    private URI perfilLinkedin;
 
     public boolean ehAdministrador() {
         return this

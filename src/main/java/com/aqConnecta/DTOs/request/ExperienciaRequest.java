@@ -3,7 +3,8 @@ package com.aqConnecta.DTOs.request;
 import lombok.*;
 import org.apache.logging.log4j.util.Strings;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+
 
 @Getter
 @Setter
@@ -15,13 +16,13 @@ public class ExperienciaRequest {
     private String instituicao;
     private String descricao;
     // yyyy-MM-dd'T'HH:mm:ss
-    private LocalDateTime dataInicio;
+    private Instant dataInicio;
     // pode ser nulo
-    private LocalDateTime dataFim;
+    private Instant dataFim;
     private boolean atualExperiencia;
 
     public boolean validarDadosObrigatorios() {
         return !Strings.isEmpty(titulo) && !Strings.isEmpty(instituicao) &&
-                !Strings.isEmpty(descricao) && dataInicio != null;
+               !Strings.isEmpty(descricao) && dataInicio != null;
     }
 }

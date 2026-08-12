@@ -3,7 +3,7 @@ package com.aqConnecta.controller;
 import com.aqConnecta.DTOs.request.LoginRequest;
 import com.aqConnecta.E2ETest;
 import com.aqConnecta.config.AWSClientConfig;
-import com.aqConnecta.model.Permissao;
+import com.aqConnecta.factories.models.UsuarioFactory;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.repository.PermissaoRepository;
 import com.aqConnecta.repository.UsuarioRepository;
@@ -31,9 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -69,17 +67,10 @@ class AuthControllerTest extends E2ETest {
     final private String senha = "12345678";
 
     private Usuario getUser() {
-        final var permissoes = new HashSet<Permissao>();
-        permissoes.add(this.permissaoRepository.findById(1L)
-            .orElseThrow(() -> new RuntimeException(
-                "Erro interno, não foi possivel criar conta com permissão de cliente")));
-
-        return Usuario.builder()
-            .id(UUID.randomUUID())
-            .nome("John Doe")
+        return UsuarioFactory.criar()
+            .toBuilder()
             .email(this.email)
             .senha(this.passwordEncoder.encode(this.senha))
-            .permissao(permissoes)
             .build();
     }
 

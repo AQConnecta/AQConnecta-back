@@ -34,8 +34,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -83,23 +84,14 @@ public class VagaControllerTest extends E2ETest {
     }
 
     private Usuario getUser(boolean ativado, boolean deletado) {
-        final var permissoes = new HashSet<Permissao>();
-        permissoes.add(this.permissaoRepository.findById(1L)
-            .orElseThrow(() -> new RuntimeException(
-                "Erro interno, não foi possivel criar conta com permissão de cliente")));
-
-        var usuario = Usuario
-            .builder()
-            .nome("John Doe")
-            .email("teste@mail.com")
-            .senha(this.passwordEncoder.encode("12345678"))
-            .permissao(permissoes)
-            .deletado(deletado)
+        var usuario = UsuarioFactory.criar()
+            .toBuilder()
             .ativado(ativado)
+            .deletado(deletado)
+            .senha(this.passwordEncoder.encode("12345678"))
             .build();
 
         usuario = this.usuarioRepository.save(usuario);
-
         return usuario;
     }
 
@@ -114,7 +106,7 @@ public class VagaControllerTest extends E2ETest {
             .localDaVaga("Maringá")
             .aceitaRemoto(true)
             .isIniciante(true)
-            .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2).withNano(0))
+            .dataLimiteCandidatura(OffsetDateTime.now(ZoneOffset.UTC).plusWeeks(2).withNano(0).toInstant())
             .build();
     }
 
@@ -133,7 +125,9 @@ public class VagaControllerTest extends E2ETest {
             Arguments.of("sem local da vaga", getValidVacancyDto().toBuilder().localDaVaga(null).build()),
             Arguments.of("com local da vaga vazio", getValidVacancyDto().toBuilder().localDaVaga("").build()),
             Arguments.of("com data limite no passado",
-                getValidVacancyDto().toBuilder().dataLimiteCandidatura(LocalDateTime.now().minusMinutes(1)).build())
+                getValidVacancyDto().toBuilder()
+                    .dataLimiteCandidatura(OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(1).toInstant())
+                    .build())
         );
     }
 
@@ -270,7 +264,7 @@ public class VagaControllerTest extends E2ETest {
             .localDaVaga("Floptropica")
             .isIniciante(false)
             .aceitaRemoto(false)
-            .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(2))
+            .dataLimiteCandidatura(OffsetDateTime.now(ZoneOffset.UTC).plusWeeks(2).toInstant())
             .publicador(usuario)
             .build();
 
@@ -282,7 +276,7 @@ public class VagaControllerTest extends E2ETest {
             .localDaVaga("Bahia Cristal")
             .isIniciante(true)
             .aceitaRemoto(true)
-            .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(3).withNano(0))
+            .dataLimiteCandidatura(OffsetDateTime.now(ZoneOffset.UTC).plusWeeks(3).withNano(0).toInstant())
             .build();
 
         final var reqJson = this.objectMapper.writeValueAsString(reqDto);
@@ -321,7 +315,7 @@ public class VagaControllerTest extends E2ETest {
             .localDaVaga("Floptropica")
             .isIniciante(false)
             .aceitaRemoto(false)
-            .dataLimiteCandidatura(LocalDateTime.now().plusWeeks(1).withNano(0))
+            .dataLimiteCandidatura(OffsetDateTime.now(ZoneOffset.UTC).plusWeeks(1).withNano(0).toInstant())
             .publicador(usuario)
             .build();
 
@@ -358,9 +352,8 @@ public class VagaControllerTest extends E2ETest {
         for (var i = 0; i < disabledVacancies; i++) {
             final var vacancy = VagaFactory.criar(user)
                 .toBuilder()
-                .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 5, TimeUnit.DAYS),
-                    ZoneId.systemDefault()))
-                .deletadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(3, TimeUnit.DAYS), ZoneId.systemDefault()))
+                .criadoEm(faker.timeAndDate().past(10, 5, TimeUnit.DAYS))
+                .deletadoEm(faker.timeAndDate().past(3, TimeUnit.DAYS))
                 .build();
 
             vacancies.add(vacancy);
@@ -369,10 +362,9 @@ public class VagaControllerTest extends E2ETest {
         for (var i = 0; i < enabledVacancies - 1; i++) {
             final var vacancy = VagaFactory.criar(user)
                 .toBuilder()
-                .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
-                    ZoneId.systemDefault()))
+                .criadoEm(faker.timeAndDate().past(10, 0, TimeUnit.DAYS))
                 .dataLimiteCandidatura(faker.bool().bool()
-                    ? LocalDateTime.ofInstant(faker.timeAndDate().future(20, TimeUnit.DAYS), ZoneId.systemDefault())
+                    ? faker.timeAndDate().future(20, TimeUnit.DAYS)
                     : null)
                 .competencias(faker.bool().bool() ? competencies : null)
                 .build();
@@ -384,10 +376,9 @@ public class VagaControllerTest extends E2ETest {
             final var vacancy = VagaFactory.criar(user)
                 .toBuilder()
                 .titulo(KNOWN_VACANCY_TITLE)
-                .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
-                    ZoneId.systemDefault()))
+                .criadoEm(faker.timeAndDate().past(10, 0, TimeUnit.DAYS))
                 .dataLimiteCandidatura(faker.bool().bool()
-                    ? LocalDateTime.ofInstant(faker.timeAndDate().future(20, TimeUnit.DAYS), ZoneId.systemDefault())
+                    ? faker.timeAndDate().future(20, TimeUnit.DAYS)
                     : null)
                 .competencias(faker.bool().bool() ? competencies : null)
                 .build();
@@ -398,10 +389,8 @@ public class VagaControllerTest extends E2ETest {
         for (var i = 0; i < expiredVacancies; i++) {
             final var vacancy = VagaFactory.criar(user)
                 .toBuilder()
-                .criadoEm(LocalDateTime.ofInstant(faker.timeAndDate().past(10, 0, TimeUnit.DAYS),
-                    ZoneId.systemDefault()))
-                .dataLimiteCandidatura(LocalDateTime.ofInstant(faker.timeAndDate().past(3, TimeUnit.DAYS),
-                    ZoneId.systemDefault()))
+                .criadoEm(faker.timeAndDate().past(10, 0, TimeUnit.DAYS))
+                .dataLimiteCandidatura(faker.timeAndDate().past(3, TimeUnit.DAYS))
                 .build();
 
             vacancies.add(vacancy);
@@ -645,7 +634,7 @@ public class VagaControllerTest extends E2ETest {
                 .map(id -> this.vagaRepository.findById(id).orElseThrow())
                 .toList();
 
-        final var now = LocalDateTime.now();
+        final var now = Instant.now();
         assertThat(vacancies).allSatisfy(vacancy -> assertTrue(
             vacancy.getDataLimiteCandidatura() == null || vacancy.getDataLimiteCandidatura().isAfter(now)));
     }
@@ -775,7 +764,7 @@ public class VagaControllerTest extends E2ETest {
         var token = this.generateToken(user);
 
         var vacancy = VagaFactory.criar(user);
-        vacancy.setDeletadoEm(LocalDateTime.now());
+        vacancy.setDeletadoEm(Instant.now());
         vacancy = this.vagaRepository.save(vacancy);
 
         this.mockMvc
@@ -793,7 +782,7 @@ public class VagaControllerTest extends E2ETest {
         var token = this.generateToken(user);
 
         var vacancy = VagaFactory.criar(user);
-        vacancy.setDataLimiteCandidatura(LocalDateTime.now().minusDays(2));
+        vacancy.setDataLimiteCandidatura(OffsetDateTime.now(ZoneOffset.UTC).minusDays(2).toInstant());
         vacancy = this.vagaRepository.save(vacancy);
 
         this.mockMvc

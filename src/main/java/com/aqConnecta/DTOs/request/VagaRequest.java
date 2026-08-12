@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Setter
@@ -28,7 +28,7 @@ public class VagaRequest {
     private boolean aceitaRemoto;
 
     @Future
-    private LocalDateTime dataLimiteCandidatura;
+    private Instant dataLimiteCandidatura;
 
     @NotNull
     private boolean isIniciante;

@@ -4,7 +4,7 @@ import com.aqConnecta.model.Vaga;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 public class VagaSpecs {
@@ -29,7 +29,7 @@ public class VagaSpecs {
 
     public static Specification<Vaga> dentroDoPrazo() {
         return (root, query, cb) -> {
-            LocalDateTime now = LocalDateTime.now();
+            var now = Instant.now();
             return cb.or(
                 cb.isNull(root.get("dataLimiteCandidatura")),
                 cb.greaterThan(root.get("dataLimiteCandidatura"), now)
