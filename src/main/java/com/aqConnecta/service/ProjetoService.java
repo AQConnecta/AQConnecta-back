@@ -326,6 +326,7 @@ public class ProjetoService {
             return ResponseEntity.ok()
                     .contentType(mediaType)
                     .cacheControl(CacheControl.maxAge(Duration.ofDays(7)).cachePrivate())
+                    .header("X-Content-Type-Options", "nosniff")
                     .body(resource);
         } catch (IllegalArgumentException e) {
             return ResponseHandler.generateResponse(e.getMessage(), HttpStatus.BAD_REQUEST);

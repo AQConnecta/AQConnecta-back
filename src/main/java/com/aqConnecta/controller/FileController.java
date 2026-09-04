@@ -21,11 +21,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 
-/**
- * Serve arquivos persistidos no PVC. Endpoint público — controle de acesso
- * é feito por obscuridade (UUID no nome) e o diretório é montado read-only
- * pelos handlers.
- */
 @Slf4j
 @RestController
 @RequestMapping("/files")
@@ -36,7 +31,6 @@ public class FileController {
 
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> serve(@PathVariable String filename) {
-        // Sanitização: rejeita filenames com path traversal ou separadores.
         String safe = StringUtils.cleanPath(filename);
         if (safe.contains("..") || safe.contains("/") || safe.contains("\\")) {
             return ResponseEntity.badRequest().build();
@@ -45,7 +39,6 @@ public class FileController {
         Path basePath = Paths.get(storagePath).toAbsolutePath().normalize();
         Path file = basePath.resolve(safe).normalize();
 
-        // Garante que o arquivo final está dentro do diretório base
         if (!file.startsWith(basePath) || !Files.exists(file) || !Files.isRegularFile(file)) {
             return ResponseEntity.notFound().build();
         }
@@ -61,6 +54,7 @@ public class FileController {
                     .contentLength(contentLength)
                     .cacheControl(CacheControl.maxAge(Duration.ofDays(7)).cachePublic())
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + safe + "\"")
+                    .header("X-Content-Type-Options", "nosniff")
                     .body(resource);
         } catch (MalformedURLException e) {
             log.warn("Arquivo com URI inválida: {}", file, e);
@@ -76,7 +70,6 @@ public class FileController {
             String mime = Files.probeContentType(file);
             if (mime != null) return mime;
         } catch (IOException ignored) {
-            // fallback abaixo
         }
         String name = file.getFileName().toString().toLowerCase();
         if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";

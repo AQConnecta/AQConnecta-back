@@ -48,7 +48,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private boolean isRateLimitedPath(String path) {
         return path.startsWith("/auth/login")
             || path.startsWith("/auth/registrar")
-            || path.startsWith("/auth/recuperando-senha");
+            || path.startsWith("/auth/recuperando-senha")
+            || path.startsWith("/auth/recuperando")
+            || path.startsWith("/auth/reenviar-confirmacao");
     }
 
     private Bucket createBucket() {
@@ -59,7 +61,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private String getClientIp(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
+            String[] hops = xForwardedFor.split(",");
+            return hops[hops.length - 1].trim();
         }
         return request.getRemoteAddr();
     }

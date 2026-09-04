@@ -45,8 +45,12 @@ public class EnderecoService {
         }
     }
 
-    public ResponseEntity<Object> listarEnderecosPorUsuario(UUID idUsuario) {
+    public ResponseEntity<Object> listarEnderecosPorUsuario(UUID idUsuario, String emailAutenticado) {
         try {
+            Usuario autenticado = usuarioService.localizarPorEmail(emailAutenticado);
+            if (!idUsuario.equals(autenticado.getId())) {
+                return ResponseHandler.generateResponse("Você não tem permissão para ver estes endereços.", HttpStatus.FORBIDDEN);
+            }
             Usuario usuario = usuarioService.localizar(idUsuario);
             Set<Endereco> enderecos = enderecoRepository.findByUsuario(usuario);
             if (!enderecos.isEmpty()) {
@@ -58,10 +62,14 @@ public class EnderecoService {
         }
     }
 
-    public ResponseEntity<Object> localizarEndereco(UUID idEndereco) {
+    public ResponseEntity<Object> localizarEndereco(UUID idEndereco, String emailAutenticado) {
         try {
+            Usuario autenticado = usuarioService.localizarPorEmail(emailAutenticado);
             Optional<Endereco> endereco = enderecoRepository.findById(idEndereco);
             if (endereco.isPresent()) {
+                if (!endereco.get().getUsuario().getId().equals(autenticado.getId())) {
+                    return ResponseHandler.generateResponse("Você não tem permissão para ver este endereço.", HttpStatus.FORBIDDEN);
+                }
                 return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, endereco);
             }
             return ResponseHandler.generateResponse("Nenhum endereço encontrado para este ID.", HttpStatus.NOT_FOUND);

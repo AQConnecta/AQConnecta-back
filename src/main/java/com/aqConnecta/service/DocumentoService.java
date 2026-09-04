@@ -12,20 +12,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Persiste arquivos enviados pelo usuário em um diretório local (montado via
- * PVC em produção). Arquivos ficam acessíveis publicamente pelo
- * {@link com.aqConnecta.controller.FileController}.
- */
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class DocumentoService {
 
-    private static final long MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024; // 10 MB
+    private static final long MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024;
 
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "image/jpeg",
@@ -35,15 +31,17 @@ public class DocumentoService {
             "application/pdf"
     );
 
-    /** Diretório base onde os arquivos são gravados. Em K8s aponta para o PVC. */
+    private static final Map<String, String> EXT_BY_CONTENT_TYPE = Map.of(
+            "image/jpeg", "jpg",
+            "image/png", "png",
+            "image/webp", "webp",
+            "image/gif", "gif",
+            "application/pdf", "pdf"
+    );
+
     @Value("${file.storage.path:/var/data/uploads}")
     private String storagePath;
 
-    /**
-     * Prefixo público usado para montar a URL retornada ao frontend.
-     * Default vazio → URL relativa /files/{nome} (mesma origem, frontend resolve).
-     * Para forçar URL absoluta, configure ex.: https://aqconnecta-back.riume.com.br
-     */
     @Value("${file.public.base-url:}")
     private String publicBaseUrl;
 
@@ -61,11 +59,10 @@ public class DocumentoService {
     public String upload(MultipartFile file) {
         validate(file);
 
-        String filename = buildSafeFilename(file.getOriginalFilename());
+        String filename = buildSafeFilename(file.getOriginalFilename(), file.getContentType());
         Path basePath = Paths.get(storagePath).toAbsolutePath().normalize();
         Path target = basePath.resolve(filename).normalize();
 
-        // Defesa extra contra path traversal: o arquivo final tem que ficar dentro do diretório base.
         if (!target.startsWith(basePath)) {
             throw new IllegalArgumentException("Caminho de arquivo inválido");
         }
@@ -93,20 +90,21 @@ public class DocumentoService {
         }
     }
 
-    /**
-     * Constrói um nome de arquivo seguro: remove diretórios e caracteres especiais
-     * do nome original e prefixa com UUID para evitar colisões.
-     */
-    private String buildSafeFilename(String originalFilename) {
+    private String buildSafeFilename(String originalFilename, String contentType) {
         String safeName = "arquivo";
         if (originalFilename != null && !originalFilename.isBlank()) {
             String base = originalFilename.replaceAll("[\\\\/]", "_");
             base = base.replaceAll("[^A-Za-z0-9._-]", "_");
+            int dot = base.lastIndexOf('.');
+            if (dot > 0) {
+                base = base.substring(0, dot);
+            }
             if (!base.isBlank()) {
                 safeName = base;
             }
         }
-        return UUID.randomUUID() + "_" + safeName;
+        String ext = EXT_BY_CONTENT_TYPE.getOrDefault(contentType == null ? "" : contentType.toLowerCase(), "bin");
+        return UUID.randomUUID() + "_" + safeName + "." + ext;
     }
 
     private String buildPublicUrl(String filename) {
@@ -120,7 +118,7 @@ public class DocumentoService {
     public String uploadEmSubpasta(MultipartFile file, String subpasta) {
         validate(file);
 
-        String filename = buildSafeFilename(file.getOriginalFilename());
+        String filename = buildSafeFilename(file.getOriginalFilename(), file.getContentType());
         Path basePath = Paths.get(storagePath).toAbsolutePath().normalize();
         Path dir = basePath.resolve(subpasta).normalize();
         if (!dir.startsWith(basePath)) {

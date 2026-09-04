@@ -98,9 +98,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletResponse httpResponse) {
         try {
-            Usuario usuario = service.localizarPorEmail(request.getEmail());
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                 request.getEmail(), request.getSenha()));
+            Usuario usuario = service.localizarPorEmail(request.getEmail());
 
             log.info("Usuário {} logou no sistema", usuario.getEmail());
             businessMetrics.login();

@@ -29,13 +29,13 @@ public class EnderecoController {
     }
 
     @GetMapping("/listar/{idUsuario}")
-    public ResponseEntity<Object> listarEnderecosPorUsuario(@PathVariable UUID idUsuario) {
-        return service.listarEnderecosPorUsuario(idUsuario);
+    public ResponseEntity<Object> listarEnderecosPorUsuario(@PathVariable UUID idUsuario, Authentication authentication) {
+        return service.listarEnderecosPorUsuario(idUsuario, authentication.getName());
     }
 
     @GetMapping("/localizar/{idEndereco}")
-    public ResponseEntity<Object> localizarEndereco(@PathVariable UUID idEndereco) {
-        return service.localizarEndereco(idEndereco);
+    public ResponseEntity<Object> localizarEndereco(@PathVariable UUID idEndereco, Authentication authentication) {
+        return service.localizarEndereco(idEndereco, authentication.getName());
     }
 
     @PutMapping("/alterar/{idEndereco}")

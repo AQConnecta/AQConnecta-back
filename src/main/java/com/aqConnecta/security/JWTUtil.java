@@ -38,9 +38,6 @@ public class JWTUtil {
             );
         }
         byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
-        // HS512 exige no mínimo 64 bytes (512 bits). Se o segredo for menor,
-        // derivamos uma chave de 64 bytes via SHA-512 — assim não quebramos
-        // deploys existentes, mas garantimos que a chave usada é forte o suficiente.
         if (bytes.length < 64) {
             try {
                 bytes = MessageDigest.getInstance("SHA-512").digest(bytes);

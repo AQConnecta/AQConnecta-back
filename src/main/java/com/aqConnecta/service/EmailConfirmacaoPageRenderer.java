@@ -11,10 +11,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-/**
- * Renderiza a página HTML retornada após o clique no link de confirmação de e-mail.
- * Carrega o template uma única vez no startup e faz substituição de placeholders.
- */
 @Slf4j
 @Component
 public class EmailConfirmacaoPageRenderer {

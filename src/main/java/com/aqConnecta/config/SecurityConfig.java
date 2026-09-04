@@ -67,22 +67,18 @@ public class SecurityConfig {
         http.addFilter(new JWTAuthorizationFilter(authenticationManager, jwtUtil, userDetailsService));
 
         http.authorizeHttpRequests(requests -> requests
-            // CORS preflight
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-            // Endpoints públicos - autenticação
             .requestMatchers("/auth/**").permitAll()
             .requestMatchers("/usuario/registrar").permitAll()
             .requestMatchers("/usuario/confirma-conta").permitAll()
             .requestMatchers("/usuario/recuperando").permitAll()
             .requestMatchers("/usuario/recuperando-senha").permitAll()
 
-            // Endpoints públicos - leitura
             .requestMatchers(HttpMethod.GET, "/competencia/listar").permitAll()
             .requestMatchers(HttpMethod.GET, "/competencia/competencias_quentes").permitAll()
             .requestMatchers(HttpMethod.GET, "/area/listar").permitAll()
 
-            // Leitura pública de vagas e projetos (navegação sem login)
             .requestMatchers(HttpMethod.GET, "/vaga/listar").permitAll()
             .requestMatchers(HttpMethod.GET, "/vaga/listar/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/vaga/localizar/**").permitAll()
@@ -93,15 +89,12 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/projeto/*/posts").permitAll()
             .requestMatchers(HttpMethod.GET, "/projeto/*/posts/**").permitAll()
 
-            // Arquivos servidos do PVC (fotos de perfil, currículos, diplomas, etc.)
             .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
 
-            // Actuator
             .requestMatchers("/actuator/health/**").permitAll()
             .requestMatchers("/actuator/info").permitAll()
             .requestMatchers("/actuator/prometheus").permitAll()
 
-            // Endpoints exclusivos de admin
             .requestMatchers(HttpMethod.POST, "/competencia/cadastrar").hasAuthority("ADMIN")
             .requestMatchers(HttpMethod.PUT, "/competencia/alterar/**").hasAuthority("ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/competencia/deletar/**").hasAuthority("ADMIN")
@@ -119,7 +112,6 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/denuncia/listar").hasAuthority("ADMIN")
             .requestMatchers(HttpMethod.PUT, "/denuncia/alterar/**").hasAuthority("ADMIN")
 
-            // Todo o resto requer autenticação
             .anyRequest().authenticated());
 
         return http.build();

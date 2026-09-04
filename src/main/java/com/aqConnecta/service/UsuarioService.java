@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Service
 public class UsuarioService {
 
-    private static final long TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 horas
+    private static final long TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -53,13 +53,6 @@ public class UsuarioService {
     @Autowired
     private BusinessMetrics businessMetrics;
 
-    /**
-     * Base pública do backend, usada para construir links que vão para o e-mail.
-     * Aceita formatos com ou sem protocolo. Exemplos válidos:
-     *   APP_URL=aqconnecta-back.riume.com.br
-     *   APP_URL=https://aqconnecta-back.riume.com.br
-     *   APP_URL=http://localhost:8080   (para dev)
-     */
     @Value("${url}")
     private String url;
 
@@ -93,9 +86,6 @@ public class UsuarioService {
             .userUrl(generateUserUrl(registro.getNome()))
             .build();
 
-        // saveAndFlush força o INSERT do usuário imediatamente.
-        // Sem isso, o @GeneratedValue(UUID) + ordem de flush do Hibernate pode
-        // tentar inserir o ConfirmaToken (abaixo) antes do Usuario, violando a FK.
         usuario = usuarioRepository.saveAndFlush(usuario);
         businessMetrics.usuarioCadastrado();
 
@@ -174,26 +164,10 @@ public class UsuarioService {
 
     public record ConfirmacaoEmailResult(ConfirmacaoStatus status, String mensagem) {}
 
-    /**
-     * Variante que devolve um result-type em vez de ResponseEntity, para o controller
-     * conseguir escolher entre renderizar JSON ou HTML.
-     *
-     * Regras de negócio:
-     *   - Se o usuário (identificado pelo token) já está ATIVADO → SUCESSO,
-     *     independente do estado do token. Acessar o link de novo é idempotente.
-     *   - Se o token está EXPIRADO e o usuário NÃO está ativado → EXPIRADO.
-     *   - Se o token é válido e o usuário não está ativado → ativa e retorna SUCESSO.
-     *   - Se o token não existe no banco → assumimos SUCESSO (já foi usado e limpo
-     *     em alguma rotina anterior; a UX "se você chegou aqui, está validado").
-     *
-     * Os tokens NÃO são mais deletados nesta operação — assim cliques repetidos
-     * continuam retornando uma resposta coerente para o usuário.
-     */
     public ConfirmacaoEmailResult confirmaEmailParaPagina(String confirmaToken) {
         Optional<ConfirmaToken> opt = confirmaRepository.findByToken(confirmaToken);
 
         if (opt.isEmpty()) {
-            // Token não está mais no banco — tratamos como sucesso (já foi usado).
             return new ConfirmacaoEmailResult(ConfirmacaoStatus.SUCESSO, null);
         }
 
@@ -202,17 +176,14 @@ public class UsuarioService {
             ? usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail())
             : null;
 
-        // Usuário já validado antes → sempre sucesso (cliques repetidos no link).
         if (usuario != null && Boolean.TRUE.equals(usuario.getAtivado())) {
             return new ConfirmacaoEmailResult(ConfirmacaoStatus.SUCESSO, null);
         }
 
-        // Token expirou e usuário ainda não foi ativado.
         if (token.isExpirado()) {
             return new ConfirmacaoEmailResult(ConfirmacaoStatus.EXPIRADO, null);
         }
 
-        // Fluxo de primeira ativação.
         if (usuario == null) {
             return new ConfirmacaoEmailResult(ConfirmacaoStatus.INVALIDO, "Usuário não encontrado.");
         }
@@ -222,11 +193,6 @@ public class UsuarioService {
         return new ConfirmacaoEmailResult(ConfirmacaoStatus.SUCESSO, null);
     }
 
-    /**
-     * Normaliza a URL base do backend para os links de e-mail.
-     * Se o valor de configuração já tem protocolo, usa como está; caso contrário
-     * prefixa com https://. Nunca inclui porta (use o host completo direto).
-     */
     private String buildBaseUrl() {
         if (url == null || url.isBlank()) {
             return "";
@@ -292,6 +258,9 @@ public class UsuarioService {
     }
 
     public ResponseEntity<Object> recuperarSenha(LoginRequest recupera, String confirmaToken) throws Exception {
+        if (recupera == null || recupera.getSenha() == null || recupera.getSenha().length() < 6) {
+            return ResponseHandler.generateResponse("A senha deve ter ao menos 6 caracteres.", HttpStatus.BAD_REQUEST);
+        }
         ConfirmaToken token =
             confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
@@ -308,7 +277,14 @@ public class UsuarioService {
     }
 
     public ResponseEntity<Object> recuperarSenha(LoginRequest email) throws Exception {
-        Usuario usuario = localizarPorEmail(email.getEmail());
+        String mensagem = "Se houver uma conta para este e-mail, enviamos um link de recuperação.";
+        if (email == null || email.getEmail() == null || email.getEmail().isBlank()) {
+            return ResponseHandler.generateResponse(mensagem, HttpStatus.OK);
+        }
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email.getEmail().trim());
+        if (usuario == null || !Boolean.TRUE.equals(usuario.getAtivado()) || usuario.isDeleted()) {
+            return ResponseHandler.generateResponse(mensagem, HttpStatus.OK);
+        }
 
         long now = System.currentTimeMillis();
         ConfirmaToken confirmationToken = ConfirmaToken.builder()
@@ -325,7 +301,7 @@ public class UsuarioService {
         String link = buildBaseUrl() + "/redefinir-senha?token=" + confirmationToken.getToken();
         String corpoEmail = emailService.criarCorpoEmail(usuario.getNome(), text, link);
         emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
-        return ResponseHandler.generateResponse("Verifique seu email para instruções de recuperação de senha.", HttpStatus.OK);
+        return ResponseHandler.generateResponse(mensagem, HttpStatus.OK);
     }
 
     public ResponseEntity<Object> salvarImagemPerfil(MultipartFile file, String emailAutenticado) {

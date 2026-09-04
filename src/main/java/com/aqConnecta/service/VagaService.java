@@ -51,10 +51,6 @@ public class VagaService {
         try {
             Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
             Vaga vaga = Vaga.builder()
-                    // Não setar ID manual — quem faz isso é o @GeneratedValue(UUID).
-                    // Setando, o Spring Data JPA cai no caminho de merge() em vez de
-                    // persist(), e o frontend pode receber um ID que não foi efetivamente
-                    // persistido (vide bug do "vaga não encontrada").
                     .publicador(usuario)
                     .titulo(registro.getTitulo())
                     .descricao(registro.getDescricao())
@@ -66,9 +62,6 @@ public class VagaService {
                     .projeto(resolverProjeto(registro.getIdProjeto()))
                     .areaAtuacao(registro.getAreaAtuacao())
                     .build();
-            // saveAndFlush garante INSERT imediato e retorna a entity gerenciada
-            // (com o ID definitivo). Indispensável porque o front chama em seguida
-            // o /competencia/relacionar_competencia_vaga com esse ID.
             vaga = vagaRepository.saveAndFlush(vaga);
             businessMetrics.vagaCriada();
             return ResponseHandler.generateResponse("Vaga cadastrada com sucesso!", HttpStatus.CREATED, vaga);
@@ -100,7 +93,6 @@ public class VagaService {
         }
     }
 
-    // @Where no modelo Vaga já filtra deletados automaticamente
     public ResponseEntity<Object> listarVagas(String titulo, UUID idCompetencia, Boolean iniciante, Pageable pageable) {
         try {
             LocalDateTime now = LocalDateTime.now();
@@ -117,7 +109,6 @@ public class VagaService {
                 vagas = page.getContent();
             }
 
-            // Filtrar por prazo de candidatura
             vagas = vagas.stream()
                     .filter(vaga -> vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now))
                     .collect(Collectors.toList());
@@ -204,7 +195,6 @@ public class VagaService {
         }
     }
 
-    // Soft delete padronizado
     public ResponseEntity<Object> deletarVaga(UUID idVaga, String emailAutenticado) {
         try {
             Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
@@ -230,7 +220,11 @@ public class VagaService {
         try {
             Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
             Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
-            Curriculo curriculo = curriculoRepository.getReferenceById(curriculoId);
+            Curriculo curriculo = curriculoRepository.findById(curriculoId)
+                    .orElseThrow(() -> new Exception("Currículo não existe"));
+            if (curriculo.getUsuario() == null || !curriculo.getUsuario().getId().equals(usuario.getId())) {
+                return ResponseHandler.generateResponse("Você não tem permissão para usar este currículo.", HttpStatus.FORBIDDEN);
+            }
 
             boolean jaCandidatado = vaga.getCandidaturas().stream()
                     .anyMatch(candidatura -> candidatura.getUsuario().getId().equals(usuario.getId()));

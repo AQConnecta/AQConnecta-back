@@ -19,12 +19,6 @@ public class EmailService {
     private final JavaMailSender javaMailSender;
     private final BusinessMetrics businessMetrics;
 
-    /**
-     * Endereço usado como remetente (From) das mensagens.
-     * Default = o próprio MAIL_USERNAME quando MAIL_FROM não estiver setado.
-     * SMTPs corporativos rejeitam mensagens sem From explícito (ex: Postfix
-     * retorna "504 Sender address rejected: need fully-qualified address").
-     */
     @Value("${spring.mail.from:${spring.mail.username}}")
     private String from;
 
