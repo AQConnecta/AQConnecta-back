@@ -1,5 +1,7 @@
 package com.aqConnecta.model;
 
+import com.aqConnecta.model.enums.AreaAtuacao;
+import com.aqConnecta.model.enums.StatusCompetencia;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,6 +26,14 @@ public class Competencia implements Serializable {
     private UUID id;
     @Column(name = "DESCRICAO")
     private String descricao;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "CATEGORIA")
+    private AreaAtuacao categoria;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "STATUS")
+    private StatusCompetencia status;
 
     @Override
     public boolean equals(Object o) {

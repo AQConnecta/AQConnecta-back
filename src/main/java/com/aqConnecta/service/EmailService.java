@@ -2,21 +2,39 @@ package com.aqConnecta.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.UnsupportedEncodingException;
 
+@Slf4j
 @Service
 public class EmailService {
 
-    private JavaMailSender javaMailSender;
+    private final JavaMailSender javaMailSender;
+    private final BusinessMetrics businessMetrics;
+
+    /**
+     * Endereço usado como remetente (From) das mensagens.
+     * Default = o próprio MAIL_USERNAME quando MAIL_FROM não estiver setado.
+     * SMTPs corporativos rejeitam mensagens sem From explícito (ex: Postfix
+     * retorna "504 Sender address rejected: need fully-qualified address").
+     */
+    @Value("${spring.mail.from:${spring.mail.username}}")
+    private String from;
+
+    @Value("${spring.mail.from-name:AQConnecta}")
+    private String fromName;
 
     @Autowired
-    public EmailService(JavaMailSender javaMailSender) {
+    public EmailService(JavaMailSender javaMailSender, BusinessMetrics businessMetrics) {
         this.javaMailSender = javaMailSender;
+        this.businessMetrics = businessMetrics;
     }
 
     @Async
@@ -25,13 +43,21 @@ public class EmailService {
         try {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+            try {
+                helper.setFrom(from, fromName);
+            } catch (UnsupportedEncodingException e) {
+                helper.setFrom(from);
+            }
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(text, true);
 
             javaMailSender.send(message);
-        } catch (MessagingException e) {
-            // Silent like a ninja
+            businessMetrics.emailEnviado();
+            log.info("E-mail enviado para {} (subject={})", email, subject);
+        } catch (MessagingException | org.springframework.mail.MailException e) {
+            businessMetrics.emailFalhou();
+            log.error("Falha ao enviar e-mail para {}: {}", email, e.getMessage());
         }
     }
 

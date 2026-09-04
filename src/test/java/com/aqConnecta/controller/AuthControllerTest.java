@@ -1,7 +1,6 @@
 package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.LoginRequest;
-import com.aqConnecta.config.AWSClientConfig;
 import com.aqConnecta.model.Permissao;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.repository.PermissaoRepository;
@@ -77,8 +76,6 @@ class AuthControllerTest {
     private EmailService emailService;
     @MockBean
     private DocumentoService documentoService;
-    @MockBean
-    private AWSClientConfig awsClientConfig;
 
     @Container
     @ServiceConnection

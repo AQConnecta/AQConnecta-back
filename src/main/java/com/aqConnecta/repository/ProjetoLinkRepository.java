@@ -1,0 +1,14 @@
+package com.aqConnecta.repository;
+
+import com.aqConnecta.model.ProjetoLink;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface ProjetoLinkRepository extends JpaRepository<ProjetoLink, UUID> {
+
+    List<ProjetoLink> findByProjetoIdOrderByOrdemAsc(UUID projetoId);
+}

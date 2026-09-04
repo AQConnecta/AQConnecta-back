@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aqconnecta-frontend-config
+  namespace: aqconnecta
+data:
+  # URL do backend usada pelo nginx (em runtime) para fazer proxy de /api/*.
+  # Apontando pra URL pública via ingress — passa pelo cert-manager/Let's Encrypt
+  # e funciona mesmo quando o Service in-cluster não está disponível.
+  BACKEND_URL: https://aqconnecta-back.riume.com.br
+
+  # NOTA: VITE_BASE_URL não é mais usado em runtime (o build vem com /api).
+  # Deixei aqui apenas para histórico; pode remover quando confiar na nova imagem.
+  VITE_BASE_URL: ""
+  VITE_ENV: production

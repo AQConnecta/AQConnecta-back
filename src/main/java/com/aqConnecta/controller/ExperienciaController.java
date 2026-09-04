@@ -3,9 +3,11 @@ package com.aqConnecta.controller;
 import com.aqConnecta.DTOs.request.ExperienciaRequest;
 import com.aqConnecta.DTOs.request.UsuarioRequest;
 import com.aqConnecta.service.ExperienciaService;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -23,13 +25,13 @@ public class ExperienciaController {
     }
 
     @PostMapping("/cadastrar")
-    public ResponseEntity<Object> cadastrarExperiencia(@RequestBody ExperienciaRequest experienciaRequest) {
-        return service.cadastrarExperiencia(experienciaRequest);
+    public ResponseEntity<Object> cadastrarExperiencia(@Valid @RequestBody ExperienciaRequest experienciaRequest, Authentication authentication) {
+        return service.cadastrarExperiencia(experienciaRequest, authentication.getName());
     }
 
     @PostMapping("/cadastrar_desc_usuario")
-    public ResponseEntity<Object> cadastrarDescricaoUsuario(@RequestBody UsuarioRequest usuarioRequest) {
-        return service.cadastrarDescricaoUsuario(usuarioRequest);
+    public ResponseEntity<Object> cadastrarDescricaoUsuario(@Valid @RequestBody UsuarioRequest usuarioRequest, Authentication authentication) {
+        return service.cadastrarDescricaoUsuario(usuarioRequest, authentication.getName());
     }
 
     @GetMapping("/listar/{idUsuario}")
@@ -43,12 +45,12 @@ public class ExperienciaController {
     }
 
     @PutMapping("/alterar/{idExperiencia}")
-    public ResponseEntity<Object> alterarExperiencia(@PathVariable UUID idExperiencia, @RequestBody ExperienciaRequest experienciaRequest) {
-        return service.alterarExperiencia(idExperiencia, experienciaRequest);
+    public ResponseEntity<Object> alterarExperiencia(@PathVariable UUID idExperiencia, @Valid @RequestBody ExperienciaRequest experienciaRequest, Authentication authentication) {
+        return service.alterarExperiencia(idExperiencia, experienciaRequest, authentication.getName());
     }
 
     @DeleteMapping("/deletar/{idExperiencia}")
-    public ResponseEntity<Object> deletarExperiencia(@PathVariable UUID idExperiencia) {
-        return service.deletarExperiencia(idExperiencia);
+    public ResponseEntity<Object> deletarExperiencia(@PathVariable UUID idExperiencia, Authentication authentication) {
+        return service.deletarExperiencia(idExperiencia, authentication.getName());
     }
 }

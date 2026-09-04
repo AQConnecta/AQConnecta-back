@@ -1,9 +1,7 @@
 package com.aqConnecta.DTOs.request;
 
+import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.apache.logging.log4j.util.Strings;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -11,5 +9,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 public class UsuarioRequest {
+
+    @Size(max = 1000, message = "Descrição deve ter no máximo 1000 caracteres")
     private String descricao;
 }

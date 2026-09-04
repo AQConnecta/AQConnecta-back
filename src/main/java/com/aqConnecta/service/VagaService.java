@@ -5,18 +5,20 @@ import com.aqConnecta.DTOs.response.ResponseHandler;
 import com.aqConnecta.DTOs.response.VagaResponse;
 import com.aqConnecta.model.Candidatura;
 import com.aqConnecta.model.Curriculo;
+import com.aqConnecta.model.Projeto;
 import com.aqConnecta.model.Vaga;
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.repository.CandidaturaRepository;
 import com.aqConnecta.repository.CurriculoRepository;
+import com.aqConnecta.repository.ProjetoRepository;
 import com.aqConnecta.repository.VagaRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -35,34 +37,41 @@ public class VagaService {
 
     @Autowired
     private CandidaturaRepository candidaturaRepository;
+
     @Autowired
     private CurriculoRepository curriculoRepository;
 
-    public ResponseEntity<Object> cadastrarVaga(VagaRequest registro) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-//        if (!registro.validarDadosObrigatorios()) {
-//            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
-//        }
+    @Autowired
+    private ProjetoRepository projetoRepository;
+
+    @Autowired
+    private BusinessMetrics businessMetrics;
+
+    public ResponseEntity<Object> cadastrarVaga(VagaRequest registro, String emailAutenticado) {
         try {
-            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-            Vaga vaga = new Vaga().builder()
-                    .id(UUID.randomUUID())
+            Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
+            Vaga vaga = Vaga.builder()
+                    // Não setar ID manual — quem faz isso é o @GeneratedValue(UUID).
+                    // Setando, o Spring Data JPA cai no caminho de merge() em vez de
+                    // persist(), e o frontend pode receber um ID que não foi efetivamente
+                    // persistido (vide bug do "vaga não encontrada").
                     .publicador(usuario)
                     .titulo(registro.getTitulo())
                     .descricao(registro.getDescricao())
                     .localDaVaga(registro.getLocalDaVaga())
                     .aceitaRemoto(registro.isAceitaRemoto())
                     .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
-                    .criadoEm(registro.getCriadoEm())
-                    .atualizadoEm(registro.getAtualizadoEm())
+                    .criadoEm(LocalDateTime.now())
                     .isIniciante(registro.isIniciante())
+                    .projeto(resolverProjeto(registro.getIdProjeto()))
+                    .areaAtuacao(registro.getAreaAtuacao())
                     .build();
-            vagaRepository.save(vaga);
-            return ResponseHandler.generateResponse("Vaga cadastrada com súcesso!", HttpStatus.CREATED, vaga);
+            // saveAndFlush garante INSERT imediato e retorna a entity gerenciada
+            // (com o ID definitivo). Indispensável porque o front chama em seguida
+            // o /competencia/relacionar_competencia_vaga com esse ID.
+            vaga = vagaRepository.saveAndFlush(vaga);
+            businessMetrics.vagaCriada();
+            return ResponseHandler.generateResponse("Vaga cadastrada com sucesso!", HttpStatus.CREATED, vaga);
         } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -78,43 +87,47 @@ public class VagaService {
         return vagasResponse;
     }
 
-    // Listar todas as vagas do sistema
-    // TODO: Implementar os filtros
-    public ResponseEntity<Object> listarVagas(String titulo, UUID idCompetencia, Boolean iniciante) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    private Projeto resolverProjeto(UUID idProjeto) {
+        return idProjeto == null ? null : projetoRepository.findById(idProjeto).orElse(null);
+    }
 
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<Object> listarVagasPorProjeto(UUID idProjeto) {
+        try {
+            List<VagaResponse> vagasResponse = fillVagaResponse(vagaRepository.findByProjetoId(idProjeto));
+            return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, vagasResponse);
+        } catch (Exception e) {
+            return ResponseHandler.generateResponse("Houve um erro ao listar as vagas do projeto.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
+    }
 
+    // @Where no modelo Vaga já filtra deletados automaticamente
+    public ResponseEntity<Object> listarVagas(String titulo, UUID idCompetencia, Boolean iniciante, Pageable pageable) {
         try {
             LocalDateTime now = LocalDateTime.now();
             List<Vaga> vagas;
 
-            // Filtra por título, competência ou todas as vagas
             if (!Strings.isEmpty(titulo)) {
-                vagas = vagaRepository.findByTituloContainingIgnoreCase(titulo);
+                Page<Vaga> page = vagaRepository.findByTituloContainingIgnoreCase(titulo, pageable);
+                vagas = page.getContent();
             } else if (idCompetencia != null) {
-                vagas = vagaRepository.findByCompetenciaId(idCompetencia);
+                Page<Vaga> page = vagaRepository.findByCompetenciaId(idCompetencia, pageable);
+                vagas = page.getContent();
             } else {
-                vagas = vagaRepository.findAll();
+                Page<Vaga> page = vagaRepository.findAll(pageable);
+                vagas = page.getContent();
             }
 
-            // Aplica os filtros de deletado e data limite
+            // Filtrar por prazo de candidatura
             vagas = vagas.stream()
-                    .filter(vaga -> vaga.getDeletadoEm() == null) // Vagas não deletadas
-                    .filter(vaga -> vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now)) // Dentro do prazo de candidatura
+                    .filter(vaga -> vaga.getDataLimiteCandidatura() == null || vaga.getDataLimiteCandidatura().isAfter(now))
                     .collect(Collectors.toList());
 
-            // Aplica o filtro de "iniciante" se o parâmetro foi fornecido
             if (iniciante != null) {
                 vagas = vagas.stream()
-                        .filter(vaga -> vaga.isIniciante() == iniciante) // Filtra baseado no campo isIniciante
+                        .filter(vaga -> vaga.isIniciante() == iniciante)
                         .collect(Collectors.toList());
             }
 
-            // Gera a resposta
             List<VagaResponse> vagasResponse = fillVagaResponse(vagas);
             if (!vagasResponse.isEmpty()) {
                 return ResponseHandler.generateResponse("Listagem feita com sucesso!", HttpStatus.OK, vagasResponse);
@@ -125,14 +138,7 @@ public class VagaService {
         }
     }
 
-
-
     public ResponseEntity<Object> listarVagasPorUsuario(UUID idUsuario) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
         try {
             Usuario usuario = usuarioService.localizar(idUsuario);
             Set<Vaga> vagas = vagaRepository.findByPublicador(usuario);
@@ -148,87 +154,69 @@ public class VagaService {
     }
 
     public ResponseEntity<Object> localizarVaga(UUID idVaga) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
         try {
             Optional<Vaga> vaga = vagaRepository.findById(idVaga);
             if (vaga.isPresent()) {
                 return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, vaga);
             }
-            return ResponseHandler.generateResponse("Nenhum experiencia encontrada para este ID.", HttpStatus.NOT_FOUND);
+            return ResponseHandler.generateResponse("Nenhuma vaga encontrada para este ID.", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            return ResponseHandler.generateResponse("Houve um erro ao tentar localizar a experiencia.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+            return ResponseHandler.generateResponse("Houve um erro ao tentar localizar a vaga.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
     public Vaga localizar(UUID uuid) throws Exception {
         Vaga vaga = vagaRepository.findById(uuid)
-                .orElseThrow(() -> new Exception("Vaga não encontrado para o id: " + uuid.toString()));
-
-        if (vaga.getDeletadoEm() != null) {
-            throw new Exception("Vaga não existe mais");
-        }
-
+                .orElseThrow(() -> new Exception("Vaga não encontrada para o id: " + uuid.toString()));
         return vaga;
     }
 
-
-    public ResponseEntity<Object> alterarVaga(UUID idVaga, VagaRequest registro) {
+    public ResponseEntity<Object> alterarVaga(UUID idVaga, VagaRequest registro, String emailAutenticado) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (isUserAnonymous(authentication)) {
-                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-            }
-            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+            Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
             Optional<Vaga> vaga = vagaRepository.findById(idVaga);
             if (vaga.isPresent()) {
                 if (!vaga.get().getPublicador().getId().equals(usuario.getId()) && usuario.verificarUsuarioNaoEAdministrador()) {
-                    return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.UNAUTHORIZED);
+                    return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
                 }
-                Vaga vagaAlterada = new Vaga().builder()
+                Vaga vagaAlterada = Vaga.builder()
                         .id(idVaga)
-                        .publicador(usuario)
+                        .publicador(vaga.get().getPublicador())
                         .titulo(registro.getTitulo())
                         .descricao(registro.getDescricao())
                         .localDaVaga(registro.getLocalDaVaga())
                         .aceitaRemoto(registro.isAceitaRemoto())
                         .dataLimiteCandidatura(registro.getDataLimiteCandidatura())
-                        .criadoEm(registro.getCriadoEm())
-                        .atualizadoEm(registro.getAtualizadoEm())
+                        .criadoEm(vaga.get().getCriadoEm())
+                        .atualizadoEm(LocalDateTime.now())
                         .isIniciante(registro.isIniciante())
+                        .competencias(vaga.get().getCompetencias())
+                        .candidaturas(vaga.get().getCandidaturas())
+                        .projeto(resolverProjeto(registro.getIdProjeto()))
+                        .areaAtuacao(registro.getAreaAtuacao())
                         .build();
                 vagaRepository.save(vagaAlterada);
-                return ResponseHandler.generateResponse("Vaga atualizada com súcesso!", HttpStatus.CREATED, vaga);
+                return ResponseHandler.generateResponse("Vaga atualizada com sucesso!", HttpStatus.OK, vagaAlterada);
             }
             return ResponseHandler.generateResponse("Erro ao encontrar a vaga!", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-
-    public ResponseEntity<Object> deletarVaga(UUID idVaga) {
+    // Soft delete padronizado
+    public ResponseEntity<Object> deletarVaga(UUID idVaga, String emailAutenticado) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-            // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (isUserAnonymous(authentication)) {
-                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-            }
-
-            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-
+            Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
             Optional<Vaga> vaga = vagaRepository.findById(idVaga);
 
             if (vaga.isPresent()) {
                 if (!vaga.get().getPublicador().getId().equals(usuario.getId()) && usuario.verificarUsuarioNaoEAdministrador()) {
                     return ResponseHandler.generateResponse("Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
                 }
-                vagaRepository.deleteById(idVaga);
+                Vaga vagaParaDeletar = vaga.get();
+                vagaParaDeletar.setDeletadoEm(LocalDateTime.now());
+                vagaRepository.save(vagaParaDeletar);
                 return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
             } else {
                 return ResponseHandler.generateResponse("Não é possível excluir uma vaga não existente.", HttpStatus.NOT_FOUND);
@@ -238,24 +226,12 @@ public class VagaService {
         }
     }
 
-    private boolean isUserAnonymous(Authentication authentication) {
-        return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
-    }
-
-    public ResponseEntity<Object> candidatar(UUID vagaId, Integer curriculoId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> candidatar(UUID vagaId, Integer curriculoId, String emailAutenticado) {
         try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario = usuarioService.localizarPorEmail(username);
-
+            Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
             Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
             Curriculo curriculo = curriculoRepository.getReferenceById(curriculoId);
+
             boolean jaCandidatado = vaga.getCandidaturas().stream()
                     .anyMatch(candidatura -> candidatura.getUsuario().getId().equals(usuario.getId()));
 
@@ -271,47 +247,26 @@ public class VagaService {
                     .build();
 
             vaga.getCandidaturas().add(novaCandidatura);
-
             vaga = vagaRepository.save(vaga);
-
             return ResponseHandler.generateResponse("Candidatura enviada com sucesso", HttpStatus.OK, vaga);
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao enviar a candidatura.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-
-    public ResponseEntity<Object> listarCandidaturas(UUID vagaId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // Verifica se o usuário está autenticado e não é anônimo
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> listarCandidaturas(UUID vagaId, String emailAutenticado) {
         try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario = usuarioService.localizarPorEmail(username);
+            Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
             Vaga vaga = vagaRepository.findById(vagaId).orElseThrow(() -> new Exception("Vaga não existe"));
 
-            // Verifica se o usuário é o publicador da vaga ou tem permissão de administrador
-            if (!usuario.getId().equals(vaga.getPublicador().getId()) && !usuario.verificarUsuarioNaoEAdministrador()) {
-                return ResponseHandler.generateResponse("Usuario não tem permissão para realizar essa tarefa.", HttpStatus.UNAUTHORIZED);
+            if (!usuario.getId().equals(vaga.getPublicador().getId()) && usuario.verificarUsuarioNaoEAdministrador()) {
+                return ResponseHandler.generateResponse("Usuario não tem permissão para realizar essa tarefa.", HttpStatus.FORBIDDEN);
             }
 
-            // Obtém todas as candidaturas para a vaga e mapeia para os usuários
-            List<Usuario> usuarios = candidaturaRepository.findAllCandidaturaByVagaId(vagaId)
-                    .stream()
-                    .map(Candidatura::getUsuario)
-                    .distinct()  // Evita duplicados, caso haja candidaturas duplicadas
-                    .collect(Collectors.toList());
-
-            return ResponseHandler.generateResponse("Usuários que se candidataram listados com sucesso", HttpStatus.OK, candidaturaRepository.findAllCandidaturaByVagaId(vagaId));
+            return ResponseHandler.generateResponse("Usuários que se candidataram listados com sucesso",
+                HttpStatus.OK, candidaturaRepository.findAllCandidaturaByVagaId(vagaId));
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao listar os usuários que se candidataram.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
-
-
 }

@@ -14,16 +14,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
 import java.text.Normalizer;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -31,6 +32,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class UsuarioService {
+
+    private static final long TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 horas
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -47,23 +50,32 @@ public class UsuarioService {
     @Autowired
     private DocumentoService documentoService;
 
+    @Autowired
+    private BusinessMetrics businessMetrics;
+
+    /**
+     * Base pública do backend, usada para construir links que vão para o e-mail.
+     * Aceita formatos com ou sem protocolo. Exemplos válidos:
+     *   APP_URL=aqconnecta-back.riume.com.br
+     *   APP_URL=https://aqconnecta-back.riume.com.br
+     *   APP_URL=http://localhost:8080   (para dev)
+     */
     @Value("${url}")
     private String url;
 
-    @Value("${port}")
-    private String port;
-
     @Autowired
     private PasswordEncoder encoder;
+
     @Autowired
     private VagaRepository vagaRepository;
+
     @Autowired
     private CandidaturaRepository candidaturaRepository;
+
     @Autowired
     private CurriculoRepository curriculoRepository;
 
     public ResponseEntity<Object> saveUsuario(RegistroRequest registro) throws RuntimeException {
-
         if (usuarioRepository.existsByEmail(registro.getEmail())) {
             return ResponseHandler.generateResponse("Erro: Email já está em uso!", HttpStatus.CONFLICT, null);
         }
@@ -74,7 +86,6 @@ public class UsuarioService {
                 "Erro interno, não foi possivel criar conta com permissão de cliente")));
 
         Usuario usuario = Usuario.builder()
-            .id(UUID.randomUUID())
             .nome(registro.getNome())
             .email(registro.getEmail())
             .senha(encoder.encode(registro.getSenha()))
@@ -82,23 +93,51 @@ public class UsuarioService {
             .userUrl(generateUserUrl(registro.getNome()))
             .build();
 
-        usuarioRepository.save(usuario);
+        // saveAndFlush força o INSERT do usuário imediatamente.
+        // Sem isso, o @GeneratedValue(UUID) + ordem de flush do Hibernate pode
+        // tentar inserir o ConfirmaToken (abaixo) antes do Usuario, violando a FK.
+        usuario = usuarioRepository.saveAndFlush(usuario);
+        businessMetrics.usuarioCadastrado();
 
+        enviarEmailConfirmacao(usuario);
+
+        return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario);
+    }
+
+    private void enviarEmailConfirmacao(Usuario usuario) {
+        long now = System.currentTimeMillis();
         ConfirmaToken confirmationToken = ConfirmaToken.builder()
             .token(UUID.randomUUID().toString())
             .usuario(usuario)
-            .dataCriacao(new Timestamp(System.currentTimeMillis()))
+            .dataCriacao(new Timestamp(now))
+            .dataExpiracao(new Timestamp(now + TOKEN_EXPIRATION_MS))
             .build();
 
         confirmaRepository.save(confirmationToken);
 
         String subject = "Complete a inscrição!";
         String text = "Para confirmar a conta, por favor clique aqui :";
-        String link = "http://" + url + ":" + port + "/auth/confirma-conta?token=" + confirmationToken.getToken();
+        String link = buildBaseUrl() + "/api/auth/confirma-conta?token=" + confirmationToken.getToken();
         String corpoEmail = emailService.criarCorpoEmail(usuario.getNome(), text, link);
         emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
+    }
 
-        return ResponseHandler.generateResponse("Verifique seu e-mail", HttpStatus.OK, usuario);
+    public ResponseEntity<Object> reenviarConfirmacao(String email) {
+        try {
+            if (email == null || email.isBlank()) {
+                return ResponseHandler.generateResponse("E-mail é obrigatório.", HttpStatus.BAD_REQUEST);
+            }
+            Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email.trim());
+            if (usuario != null && !Boolean.TRUE.equals(usuario.getAtivado())) {
+                enviarEmailConfirmacao(usuario);
+            }
+            return ResponseHandler.generateResponse(
+                "Se houver uma conta não ativada para este e-mail, enviamos um novo link de confirmação.",
+                HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Erro ao reenviar confirmação de e-mail", e);
+            return ResponseHandler.generateResponse("Não foi possível reenviar o e-mail. Tente novamente.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     private String generateUserUrl(String nome) {
@@ -106,15 +145,12 @@ public class UsuarioService {
             return null;
         }
         Random random = new Random();
-
         String normalized = Normalizer.normalize(nome, Normalizer.Form.NFD);
         normalized = Pattern.compile("\\p{M}").matcher(normalized).replaceAll("");
-
         normalized = normalized.toLowerCase().replace(" ", "-");
         if (usuarioRepository.existsByUserUrl(normalized)) {
             normalized = normalized.concat(String.format("-%d", Math.abs(random.nextLong())));
         }
-
         return normalized;
     }
 
@@ -122,47 +158,106 @@ public class UsuarioService {
         ConfirmaToken token =
             confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
-        if (token != null) {
-            Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
-            usuario.setAtivado(true);
-            usuarioRepository.save(usuario);
+        if (token.isExpirado()) {
             confirmaRepository.delete(token);
-            return ResponseHandler.generateResponse("Email verificado com sucesso!", HttpStatus.OK, null);
+            return ResponseHandler.generateResponse("Token expirado. Solicite um novo.", HttpStatus.BAD_REQUEST);
         }
-        return ResponseHandler.generateResponse("Error: Não foi possivel verificar o email", HttpStatus.BAD_REQUEST);
+
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
+        usuario.setAtivado(true);
+        usuarioRepository.save(usuario);
+        confirmaRepository.delete(token);
+        return ResponseHandler.generateResponse("Email verificado com sucesso!", HttpStatus.OK, null);
     }
 
-    public ResponseEntity<Object> localizarPorUrl(String userUrl) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-            .toLowerCase()
-            .contains("anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
+    public enum ConfirmacaoStatus { SUCESSO, EXPIRADO, INVALIDO }
+
+    public record ConfirmacaoEmailResult(ConfirmacaoStatus status, String mensagem) {}
+
+    /**
+     * Variante que devolve um result-type em vez de ResponseEntity, para o controller
+     * conseguir escolher entre renderizar JSON ou HTML.
+     *
+     * Regras de negócio:
+     *   - Se o usuário (identificado pelo token) já está ATIVADO → SUCESSO,
+     *     independente do estado do token. Acessar o link de novo é idempotente.
+     *   - Se o token está EXPIRADO e o usuário NÃO está ativado → EXPIRADO.
+     *   - Se o token é válido e o usuário não está ativado → ativa e retorna SUCESSO.
+     *   - Se o token não existe no banco → assumimos SUCESSO (já foi usado e limpo
+     *     em alguma rotina anterior; a UX "se você chegou aqui, está validado").
+     *
+     * Os tokens NÃO são mais deletados nesta operação — assim cliques repetidos
+     * continuam retornando uma resposta coerente para o usuário.
+     */
+    public ConfirmacaoEmailResult confirmaEmailParaPagina(String confirmaToken) {
+        Optional<ConfirmaToken> opt = confirmaRepository.findByToken(confirmaToken);
+
+        if (opt.isEmpty()) {
+            // Token não está mais no banco — tratamos como sucesso (já foi usado).
+            return new ConfirmacaoEmailResult(ConfirmacaoStatus.SUCESSO, null);
         }
 
-        assert authentication != null;
-        String username = (String) authentication.getPrincipal();
-        Usuario usuarioLogado = usuarioRepository.findByEmail(username).get();
+        ConfirmaToken token = opt.get();
+        Usuario usuario = token.getUsuario() != null
+            ? usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail())
+            : null;
+
+        // Usuário já validado antes → sempre sucesso (cliques repetidos no link).
+        if (usuario != null && Boolean.TRUE.equals(usuario.getAtivado())) {
+            return new ConfirmacaoEmailResult(ConfirmacaoStatus.SUCESSO, null);
+        }
+
+        // Token expirou e usuário ainda não foi ativado.
+        if (token.isExpirado()) {
+            return new ConfirmacaoEmailResult(ConfirmacaoStatus.EXPIRADO, null);
+        }
+
+        // Fluxo de primeira ativação.
+        if (usuario == null) {
+            return new ConfirmacaoEmailResult(ConfirmacaoStatus.INVALIDO, "Usuário não encontrado.");
+        }
+
+        usuario.setAtivado(true);
+        usuarioRepository.save(usuario);
+        return new ConfirmacaoEmailResult(ConfirmacaoStatus.SUCESSO, null);
+    }
+
+    /**
+     * Normaliza a URL base do backend para os links de e-mail.
+     * Se o valor de configuração já tem protocolo, usa como está; caso contrário
+     * prefixa com https://. Nunca inclui porta (use o host completo direto).
+     */
+    private String buildBaseUrl() {
+        if (url == null || url.isBlank()) {
+            return "";
+        }
+        String trimmed = url.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            return trimmed.replaceAll("/+$", "");
+        }
+        return "https://" + trimmed.replaceAll("/+$", "");
+    }
+
+    public ResponseEntity<Object> localizarPorUrl(String userUrl, String emailAutenticado) {
+        Usuario usuarioLogado = usuarioRepository.findByEmail(emailAutenticado)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário autenticado não encontrado"));
 
         Optional<Usuario> usuario = usuarioRepository.findByUserUrl(userUrl);
 
         if (usuario.isEmpty()) {
             return ResponseHandler.generateResponse(
-                String.format("Usuário não encontrado para url %s", userUrl),
-                HttpStatus.NOT_FOUND);
+                String.format("Usuário não encontrado para url %s", userUrl), HttpStatus.NOT_FOUND);
         }
 
-        if (usuario.get().getDeletado()) {
+        if (usuario.get().isDeleted()) {
             return ResponseHandler.generateResponse("Usuário não existe mais!", HttpStatus.NOT_FOUND);
         }
 
-        if (usuario.get().getId() == usuarioLogado.getId()) {
+        if (usuario.get().getId().equals(usuarioLogado.getId())) {
             MeuUsuarioResponse meuUsuarioResponse = new MeuUsuarioResponse();
             meuUsuarioResponse.inToOut(usuario.get());
             return ResponseHandler.generateResponse("Usuário encontrado!", HttpStatus.OK, meuUsuarioResponse);
-        }
-        else {
+        } else {
             OutroUsuarioResponse outroUsuarioResponse = new OutroUsuarioResponse();
             outroUsuarioResponse.inToOut(usuario.get());
             return ResponseHandler.generateResponse("Usuário encontrado!", HttpStatus.OK, outroUsuarioResponse);
@@ -176,7 +271,7 @@ public class UsuarioService {
             .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado para o email: " + email));
 
         if (!usuario.getAtivado()) throw new UsuarioNaoVerificadoException(email);
-        if (usuario.getDeletado()) throw new UsuarioRemovidoException();
+        if (usuario.isDeleted()) throw new UsuarioRemovidoException();
 
         return usuario;
     }
@@ -189,127 +284,81 @@ public class UsuarioService {
             throw new Exception("Usuário não foi ativado, verifique seu email:" + uuid);
         }
 
-        if (usuario.getDeletado()) {
+        if (usuario.isDeleted()) {
             throw new Exception("Usuário não existe mais");
         }
 
         return usuario;
     }
 
-
-    public ResponseEntity<Object> recuperarSenha(LoginRequest recupera, String confirmaToken)
-    throws Exception {
+    public ResponseEntity<Object> recuperarSenha(LoginRequest recupera, String confirmaToken) throws Exception {
         ConfirmaToken token =
             confirmaRepository.findByToken(confirmaToken).orElseThrow(() -> new Exception("Token não encontrado"));
 
-        if (token != null) {
-            Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
-            usuario.setSenha(encoder.encode(recupera.getSenha()));
-            usuarioRepository.save(usuario);
+        if (token.isExpirado()) {
             confirmaRepository.delete(token);
-            return ResponseHandler.generateResponse("Senha alterara com sucesso!.", HttpStatus.OK);
+            return ResponseHandler.generateResponse("Token expirado. Solicite um novo.", HttpStatus.BAD_REQUEST);
         }
 
-        return ResponseHandler.generateResponse("Error: Não foi possivel alterar a senha", HttpStatus.BAD_REQUEST);
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(token.getUsuario().getEmail());
+        usuario.setSenha(encoder.encode(recupera.getSenha()));
+        usuarioRepository.save(usuario);
+        confirmaRepository.delete(token);
+        return ResponseHandler.generateResponse("Senha alterada com sucesso!", HttpStatus.OK);
     }
 
     public ResponseEntity<Object> recuperarSenha(LoginRequest email) throws Exception {
         Usuario usuario = localizarPorEmail(email.getEmail());
 
+        long now = System.currentTimeMillis();
         ConfirmaToken confirmationToken = ConfirmaToken.builder()
             .token(UUID.randomUUID().toString())
             .usuario(usuario)
-            .dataCriacao(new Timestamp(System.currentTimeMillis()))
+            .dataCriacao(new Timestamp(now))
+            .dataExpiracao(new Timestamp(now + TOKEN_EXPIRATION_MS))
             .build();
 
         confirmaRepository.save(confirmationToken);
 
         String subject = "Recuperação de Senha";
         String text = "Para redefinir sua senha, clique no link abaixo:\n";
-        String link = "http://" + url + ":" + port + "/auth/recuperando?token=" + confirmationToken.getToken();
+        String link = buildBaseUrl() + "/redefinir-senha?token=" + confirmationToken.getToken();
         String corpoEmail = emailService.criarCorpoEmail(usuario.getNome(), text, link);
         emailService.sendEmail(usuario.getEmail(), subject, corpoEmail);
-        return ResponseHandler.generateResponse("Verifique seu email para instruções de recuperação de senha.",
-            HttpStatus.OK);
+        return ResponseHandler.generateResponse("Verifique seu email para instruções de recuperação de senha.", HttpStatus.OK);
     }
 
-    public ResponseEntity<Object> salvarImagemPerfil(MultipartFile file) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null &&
-            authentication.isAuthenticated() &&
-            authentication.getName()
-                .toLowerCase()
-                .contains(
-                    "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> salvarImagemPerfil(MultipartFile file, String emailAutenticado) {
         try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario =
-                usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
-            usuario.setFotoPerfil(documentoService.upload(file));
+            Usuario usuario = usuarioRepository.findByEmail(emailAutenticado)
+                .orElseThrow(() -> new Exception("Usuario não existe"));
+            String urlImagem = documentoService.upload(file);
+            usuario.setFotoPerfil(urlImagem);
             usuarioRepository.save(usuario);
-
-            return ResponseHandler.generateResponse("Foto adicionada com sucesso",
-                HttpStatus.OK,
-                documentoService.upload(file));
-        }
-        catch (Exception e) {
+            return ResponseHandler.generateResponse("Foto adicionada com sucesso", HttpStatus.OK, urlImagem);
+        } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao mandar a imagem.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
+                HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-    public ResponseEntity<Object> removerImagemPerfil() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-            .toLowerCase()
-            .contains(
-                "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> removerImagemPerfil(String emailAutenticado) {
         try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario =
-                usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
+            Usuario usuario = usuarioRepository.findByEmail(emailAutenticado)
+                .orElseThrow(() -> new Exception("Usuario não existe"));
             usuario.setFotoPerfil(null);
             usuarioRepository.save(usuario);
-
             return ResponseHandler.generateResponse("Foto removida com sucesso", HttpStatus.OK);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao remover a imagem.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
+                HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-    public ResponseEntity<Object> anexarCurriculo(MultipartFile file, String nome) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-            .toLowerCase()
-            .contains(
-                "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> anexarCurriculo(MultipartFile file, String nome, String emailAutenticado) {
         try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario =
-                usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
-
-            if (usuario.getCurriculo() == null) {
-                usuario.setCurriculo(new HashSet<>());
-            }
+            Usuario usuario = usuarioRepository.findByEmail(emailAutenticado)
+                .orElseThrow(() -> new Exception("Usuario não existe"));
 
             Curriculo novoCurriculo = Curriculo.builder()
                 .curriculo(documentoService.upload(file))
@@ -317,39 +366,19 @@ public class UsuarioService {
                 .usuario(usuario)
                 .build();
 
-            // Adiciona o novo currículo ao conjunto de currículos
             curriculoRepository.save(novoCurriculo);
-
-            return ResponseHandler.generateResponse("Currículo adicionado com sucesso",
-                HttpStatus.OK,
-                documentoService.upload(file));
-        }
-        catch (Exception e) {
+            return ResponseHandler.generateResponse("Currículo adicionado com sucesso", HttpStatus.OK, novoCurriculo.getCurriculo());
+        } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao enviar o currículo.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
+                HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-
-    public ResponseEntity<Object> removerCurriculo(Integer id) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // Verifica se o usuário está autenticado e não é anônimo
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-            .toLowerCase()
-            .contains(
-                "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> removerCurriculo(Integer id, String emailAutenticado) {
         try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario =
-                usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
+            Usuario usuario = usuarioRepository.findByEmail(emailAutenticado)
+                .orElseThrow(() -> new Exception("Usuario não existe"));
 
-            // Procura o currículo pelo ID e remove do Set
             Curriculo curriculoParaRemover = usuario.getCurriculo()
                 .stream()
                 .filter(curriculo -> curriculo.getId().equals(id))
@@ -358,158 +387,89 @@ public class UsuarioService {
 
             usuario.getCurriculo().remove(curriculoParaRemover);
             usuarioRepository.save(usuario);
-
             return ResponseHandler.generateResponse("Currículo removido com sucesso", HttpStatus.OK);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao remover o currículo.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
+                HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
-    }
-
-    private boolean isUserAnonymous(Authentication authentication) {
-        return authentication == null || !authentication.isAuthenticated()
-               || "anonymousUser".equals(authentication.getName());
     }
 
     public ResponseEntity<Object> inativarUsuario(UUID idUsuario) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
         try {
-            Usuario usuario = localizarPorEmail(authentication.getName());
-            if (usuario.verificarUsuarioNaoEAdministrador()) {
-                return ResponseHandler.generateResponse("Você não tem permissão para inativar um usuário.",
-                    HttpStatus.FORBIDDEN);
-            }
             Usuario usuarioDeletado = localizar(idUsuario);
             usuarioDeletado.setDeletado(true);
+            usuarioDeletado.setDeletadoEm(LocalDateTime.now());
             usuarioRepository.save(usuarioDeletado);
-            return ResponseHandler.generateResponse("Usuário inativado com súcesso!", HttpStatus.OK);
-        }
-        catch (Exception e) {
+            return ResponseHandler.generateResponse("Usuário inativado com sucesso!", HttpStatus.OK);
+        } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()),
                 HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     public ResponseEntity<Object> reativarUsuario(UUID idUsuario) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
         try {
-            Usuario usuario = localizarPorEmail(authentication.getName());
-            if (usuario.verificarUsuarioNaoEAdministrador()) {
-                return ResponseHandler.generateResponse("Você não tem permissão para reativar um usuário.",
-                    HttpStatus.FORBIDDEN);
-            }
-            Usuario usuarioDeletado = usuarioRepository.findById(idUsuario).get();
+            Usuario usuarioDeletado = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new Exception("Usuário não encontrado"));
             usuarioDeletado.setDeletado(false);
+            usuarioDeletado.setDeletadoEm(null);
             usuarioRepository.save(usuarioDeletado);
-            return ResponseHandler.generateResponse("Usuário ativado com súcesso!", HttpStatus.OK);
-        }
-        catch (Exception e) {
+            return ResponseHandler.generateResponse("Usuário ativado com sucesso!", HttpStatus.OK);
+        } catch (Exception e) {
             return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()),
                 HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    public ResponseEntity<Object> listarCurriculo() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // Verifica se o usuário está autenticado e não é anônimo
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-            .toLowerCase()
-            .contains(
-                "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> listarCurriculo(String emailAutenticado) {
         try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario =
-                usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
-
-            return ResponseHandler.generateResponse("Todos os currículos do usuário",
-                HttpStatus.OK,
-                usuario.getCurriculo());
-        }
-        catch (Exception e) {
+            Usuario usuario = usuarioRepository.findByEmail(emailAutenticado)
+                .orElseThrow(() -> new Exception("Usuario não existe"));
+            return ResponseHandler.generateResponse("Todos os currículos do usuário", HttpStatus.OK, usuario.getCurriculo());
+        } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao listar os currículos.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
+                HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-    public ResponseEntity<Object> listar(String userUrl) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // Verifica se o usuário está autenticado e não é anônimo
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-            .toLowerCase()
-            .contains(
-                "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> listar(String userUrl, Pageable pageable) {
         try {
-            assert authentication != null;
-            List<Usuario> usuarios;
-            usuarios = Strings.isEmpty(userUrl)
-                ? usuarioRepository.findAll()
-                : usuarioRepository.findAllByNomeContainingIgnoreCase(userUrl);
-            List<OutroUsuarioResponse> usuarioResponses = new ArrayList<>();
-            usuarios.forEach(usuario -> {
-                OutroUsuarioResponse usuarioResponse = new OutroUsuarioResponse();
-                usuarioResponse.inToOut(usuario);
-                usuarioResponses.add(usuarioResponse);
-            });
-            return ResponseHandler.generateResponse("Filtro de usuário feito!",
-                HttpStatus.OK,
-                usuarioResponses);
-        }
-        catch (Exception e) {
+            if (Strings.isEmpty(userUrl)) {
+                Page<Usuario> usuarios = usuarioRepository.findAll(pageable);
+                List<OutroUsuarioResponse> usuarioResponses = usuarios.getContent().stream().map(u -> {
+                    OutroUsuarioResponse resp = new OutroUsuarioResponse();
+                    resp.inToOut(u);
+                    return resp;
+                }).collect(Collectors.toList());
+                return ResponseHandler.generateResponse("Filtro de usuário feito!", HttpStatus.OK, usuarioResponses);
+            } else {
+                Page<Usuario> usuarios = usuarioRepository.findAllByNomeContainingIgnoreCase(userUrl, pageable);
+                List<OutroUsuarioResponse> usuarioResponses = usuarios.getContent().stream().map(u -> {
+                    OutroUsuarioResponse resp = new OutroUsuarioResponse();
+                    resp.inToOut(u);
+                    return resp;
+                }).collect(Collectors.toList());
+                return ResponseHandler.generateResponse("Filtro de usuário feito!", HttpStatus.OK, usuarioResponses);
+            }
+        } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao filtrar usuários.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
+                HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-
-    public ResponseEntity<Object> listarCandidaturas() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        // Verifica se o usuário está autenticado e não é anônimo
-        if (authentication != null && authentication.isAuthenticated() && authentication.getName()
-            .toLowerCase()
-            .contains(
-                "anonymous")) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<Object> listarCandidaturas(String emailAutenticado) {
         try {
-            assert authentication != null;
-            String username = (String) authentication.getPrincipal();
-            Usuario usuario =
-                usuarioRepository.findByEmail(username).orElseThrow(() -> new Exception("Usuario não existe"));
-            List<Vaga> vagas =
-                vagaRepository.findAllById(candidaturaRepository.findAllCandidaturaByUsuarioId(usuario.getId())
+            Usuario usuario = usuarioRepository.findByEmail(emailAutenticado)
+                .orElseThrow(() -> new Exception("Usuario não existe"));
+            List<Vaga> vagas = vagaRepository.findAllById(
+                candidaturaRepository.findAllCandidaturaByUsuarioId(usuario.getId())
                     .stream()
-                    .map(candidatura -> candidatura.getVaga()
-                        .getId())
+                    .map(candidatura -> candidatura.getVaga().getId())
                     .collect(Collectors.toList()));
             return ResponseHandler.generateResponse("Todos as vagas candidatadas do usuario", HttpStatus.OK, vagas);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao listar as candidaturas.",
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                e.getMessage());
+                HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 }

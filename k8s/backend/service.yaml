@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aqconnecta-backend
+  namespace: aqconnecta
+  labels:
+    app: aqconnecta-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: aqconnecta-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP

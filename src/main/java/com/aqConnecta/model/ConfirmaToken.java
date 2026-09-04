@@ -1,8 +1,6 @@
 package com.aqConnecta.model;
 
 import java.sql.Timestamp;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.*;
@@ -22,10 +20,10 @@ import lombok.ToString;
 @Entity
 @ToString
 public class ConfirmaToken {
-	
-	@Id
-	@GeneratedValue(strategy=GenerationType.UUID)
-	@Column(name = "ID")
+
+    @Id
+    @GeneratedValue(strategy=GenerationType.UUID)
+    @Column(name = "ID")
     private UUID Id;
 
     @Column(name = "TOKEN")
@@ -34,7 +32,14 @@ public class ConfirmaToken {
     @Column(name = "DATA_CRIACAO")
     private Timestamp dataCriacao;
 
+    @Column(name = "DATA_EXPIRACAO")
+    private Timestamp dataExpiracao;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID")
     private Usuario usuario;
+
+    public boolean isExpirado() {
+        return dataExpiracao != null && dataExpiracao.before(new Timestamp(System.currentTimeMillis()));
+    }
 }

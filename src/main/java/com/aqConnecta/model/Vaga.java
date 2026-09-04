@@ -1,8 +1,11 @@
 package com.aqConnecta.model;
 
+import com.aqConnecta.model.enums.AreaAtuacao;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Where;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -18,6 +21,7 @@ import java.util.UUID;
 @Table(name = "TB_VAGA")
 @Entity
 @ToString
+@Where(clause = "DELETADO_EM IS NULL")
 public class Vaga implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -28,7 +32,6 @@ public class Vaga implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "ID_USUARIO")
-//    @JsonBackReference // evitar recursao infinita
     private Usuario publicador;
 
     @Column(name = "TITULO")
@@ -60,10 +63,16 @@ public class Vaga implements Serializable {
     )
     private Set<Competencia> competencias = new HashSet<>();
 
+    @ManyToOne
+    @JoinColumn(name = "ID_PROJETO")
+    @JsonIgnore
+    private Projeto projeto;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "AREA_ATUACAO")
+    private AreaAtuacao areaAtuacao;
+
     @OneToMany(mappedBy = "vaga", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JsonBackReference
     private Set<Candidatura> candidaturas = new HashSet<>();
-
-
-
 }

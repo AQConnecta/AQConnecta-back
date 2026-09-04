@@ -1,9 +1,8 @@
 package com.aqConnecta.DTOs.request;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.apache.logging.log4j.util.Strings;
-
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -11,18 +10,28 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class EnderecoRequest {
-    private String cep;
-    private String rua;
-    private String bairro;
-    private String cidade;
-    private String estado;
-    private String pais;
-    private String numeroCasa;
-    private String complemento;
 
-    public boolean validarDadosObrigatorios() {
-        return !Strings.isEmpty(cep) && !Strings.isEmpty(rua) && !Strings.isEmpty(bairro) &&
-                !Strings.isEmpty(cidade) && !Strings.isEmpty(estado) && !Strings.isEmpty(pais) &&
-                !Strings.isEmpty(numeroCasa) && !Strings.isEmpty(complemento);
-    }
+    @NotBlank(message = "CEP é obrigatório")
+    @Size(max = 10, message = "CEP deve ter no máximo 10 caracteres")
+    private String cep;
+
+    @NotBlank(message = "Rua é obrigatória")
+    private String rua;
+
+    @NotBlank(message = "Bairro é obrigatório")
+    private String bairro;
+
+    @NotBlank(message = "Cidade é obrigatória")
+    private String cidade;
+
+    @NotBlank(message = "Estado é obrigatório")
+    private String estado;
+
+    @NotBlank(message = "País é obrigatório")
+    private String pais;
+
+    @NotBlank(message = "Número da casa é obrigatório")
+    private String numeroCasa;
+
+    private String complemento;
 }

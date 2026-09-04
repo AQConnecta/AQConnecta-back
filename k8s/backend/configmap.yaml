@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aqconnecta-backend-config
+  namespace: aqconnecta
+data:
+  SPRING_PROFILES_ACTIVE: prod
+  SERVER_PORT: "8080"
+  PORT: "8080"
+
+  # Banco (in-cluster)
+  MYSQL_HOST: mysql
+  MYSQL_PORT: "3306"
+  MYSQL_DB: aqconnecta
+
+  # Flyway
+  FLYWAY_ENABLED: "true"
+  FLYWAY_BASELINE_ON_MIGRATE: "true"
+  JPA_DDL_AUTO: none
+
+  # CORS — não é mais estritamente necessário porque o frontend faz proxy
+  # same-origin via nginx. Mantido aqui para garantir compatibilidade caso
+  # algum cliente externo chame direto. ATENÇÃO ao typo histórico:
+  # antes estava "aqconneta" (sem o segundo 'c').
+  CORS_URLS: https://aqconnecta.riume.com.br
+
+  # URL pública do backend (usada em links de email, etc.)
+  APP_URL: aqconnecta-back.riume.com.br
+
+  # Armazenamento de arquivos (PVC montado no pod)
+  FILE_STORAGE_PATH: /var/data/uploads
+  # Prefixo público para URLs retornadas ao frontend.
+  # Backend serve /files/{nome}; este prefixo deixa a URL absoluta para
+  # que <img>, downloads e mobile apps consigam buscar diretamente.
+  FILE_PUBLIC_BASE_URL: https://aqconnecta-back.riume.com.br
+
+  # Logging
+  LOG_LEVEL_ROOT: INFO
+  LOG_LEVEL_APP: INFO

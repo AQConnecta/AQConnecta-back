@@ -1,11 +1,9 @@
 package com.aqConnecta.DTOs.request;
 
-import com.aqConnecta.model.Permissao;
-import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
-
-import java.util.List;
-import java.util.UUID;
 
 @Getter
 @Setter
@@ -14,10 +12,15 @@ import java.util.UUID;
 @Builder
 public class RegistroRequest {
 
+    @NotBlank(message = "Nome é obrigatório")
+    @Size(min = 2, max = 255, message = "Nome deve ter entre 2 e 255 caracteres")
     private String nome;
 
+    @NotBlank(message = "Email é obrigatório")
+    @Email(message = "Email deve ser válido")
     private String email;
 
+    @NotBlank(message = "Senha é obrigatória")
+    @Size(min = 6, max = 100, message = "Senha deve ter entre 6 e 100 caracteres")
     private String senha;
-
 }

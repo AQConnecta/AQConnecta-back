@@ -2,9 +2,13 @@ package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.VagaRequest;
 import com.aqConnecta.service.VagaService;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,16 +26,19 @@ public class VagaController {
     }
 
     @PostMapping("/cadastrar")
-    public ResponseEntity<Object> cadastrarVaga(@RequestBody VagaRequest vagaRequest) {
-        return service.cadastrarVaga(vagaRequest);
+    public ResponseEntity<Object> cadastrarVaga(@Valid @RequestBody VagaRequest vagaRequest, Authentication authentication) {
+        return service.cadastrarVaga(vagaRequest, authentication.getName());
     }
 
     @GetMapping("/listar")
     public ResponseEntity<Object> listarVagas(
             @RequestParam(value = "titulo", required = false, defaultValue = "") String titulo,
             @RequestParam(value = "idCompetencia", required = false) UUID idCompetencia,
-            @RequestParam(value = "iniciante", required = false) Boolean iniciante) {
-        return service.listarVagas(titulo, idCompetencia, iniciante);
+            @RequestParam(value = "iniciante", required = false) Boolean iniciante,
+            @RequestParam(value = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(value = "size", required = false, defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return service.listarVagas(titulo, idCompetencia, iniciante, pageable);
     }
 
     @GetMapping("/listar/{idUsuario}")
@@ -45,22 +52,27 @@ public class VagaController {
     }
 
     @PutMapping("/alterar/{idVaga}")
-    public ResponseEntity<Object> alterarVaga(@PathVariable UUID idVaga, @RequestBody VagaRequest vagaRequest) {
-        return service.alterarVaga(idVaga, vagaRequest);
+    public ResponseEntity<Object> alterarVaga(@PathVariable UUID idVaga, @Valid @RequestBody VagaRequest vagaRequest, Authentication authentication) {
+        return service.alterarVaga(idVaga, vagaRequest, authentication.getName());
     }
 
     @DeleteMapping("/deletar/{idVaga}")
-    public ResponseEntity<Object> deletarVaga(@PathVariable UUID idVaga) {
-        return service.deletarVaga(idVaga);
+    public ResponseEntity<Object> deletarVaga(@PathVariable UUID idVaga, Authentication authentication) {
+        return service.deletarVaga(idVaga, authentication.getName());
     }
 
     @PostMapping("/candidatar/{idVaga}")
-    public ResponseEntity<Object> candidatar(@PathVariable UUID idVaga, @RequestBody Integer curriculoId) {
-        return service.candidatar(idVaga, curriculoId);
+    public ResponseEntity<Object> candidatar(@PathVariable UUID idVaga, @RequestBody Integer curriculoId, Authentication authentication) {
+        return service.candidatar(idVaga, curriculoId, authentication.getName());
     }
 
     @GetMapping("/candidaturas/{idVaga}")
-    public ResponseEntity<Object> ListarCandidaturas(@PathVariable UUID idVaga) {
-        return service.listarCandidaturas(idVaga);
+    public ResponseEntity<Object> ListarCandidaturas(@PathVariable UUID idVaga, Authentication authentication) {
+        return service.listarCandidaturas(idVaga, authentication.getName());
+    }
+
+    @GetMapping("/por-projeto/{idProjeto}")
+    public ResponseEntity<Object> listarPorProjeto(@PathVariable UUID idProjeto) {
+        return service.listarVagasPorProjeto(idProjeto);
     }
 }

@@ -2,6 +2,7 @@ package com.aqConnecta.DTOs.response;
 
 import com.aqConnecta.model.Competencia;
 import com.aqConnecta.model.Vaga;
+import com.aqConnecta.model.enums.AreaAtuacao;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -26,6 +27,9 @@ public class VagaResponse {
     private LocalDateTime criadoEm;
     private LocalDateTime atualizadoEm;
     private boolean isIniciante = false;
+    private UUID projetoId;
+    private String projetoTitulo;
+    private AreaAtuacao areaAtuacao;
 
     public void inToOut(Vaga vaga) {
         this.id = vaga.getId();
@@ -41,5 +45,10 @@ public class VagaResponse {
         this.criadoEm = vaga.getCriadoEm();
         this.atualizadoEm = vaga.getAtualizadoEm();
         this.isIniciante = vaga.isIniciante();
+        this.areaAtuacao = vaga.getAreaAtuacao();
+        if (vaga.getProjeto() != null) {
+            this.projetoId = vaga.getProjeto().getId();
+            this.projetoTitulo = vaga.getProjeto().getTitulo();
+        }
     }
 }

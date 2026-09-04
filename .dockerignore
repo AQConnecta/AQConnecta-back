@@ -1,0 +1,43 @@
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+.vscode
+*.iml
+.settings
+.project
+.classpath
+
+# Build artifacts
+target
+build
+out
+*.log
+
+# Maven wrapper logs
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/MavenWrapperDownloader.java
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / env
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+
+# Tests
+**/target
+**/*.surefire-*
+
+# Docker
+Dockerfile.*
+docker-compose*.yml
+infra

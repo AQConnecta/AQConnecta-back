@@ -1,0 +1,19 @@
+package com.aqConnecta.model.enums;
+
+public enum AreaAtuacao {
+    TECNOLOGIA,
+    SAUDE,
+    EDUCACAO,
+    ENGENHARIA,
+    ADMINISTRACAO,
+    FINANCAS,
+    DIREITO,
+    COMUNICACAO_MARKETING,
+    DESIGN_ARTES,
+    CIENCIAS_HUMANAS,
+    AGRONEGOCIO_MEIO_AMBIENTE,
+    INDUSTRIA_PRODUCAO,
+    SERVICOS,
+    PESQUISA_CIENCIA,
+    OUTRO
+}

@@ -22,7 +22,6 @@ public class DBService {
 	
 	public void instanciaDB() {
 		Usuario usuario = Usuario.builder()
-				.id(UUID.randomUUID())
 				.deletado(false)
 				.email("riume@teste2.com")
 				.nome("riume2")

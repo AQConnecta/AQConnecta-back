@@ -3,11 +3,13 @@ package com.aqConnecta.controller;
 import com.aqConnecta.DTOs.request.CompetenciaRequest;
 import com.aqConnecta.DTOs.request.CompetenciaUsuarioRequest;
 import com.aqConnecta.DTOs.request.CompetenciaVagaRequest;
-import com.aqConnecta.DTOs.request.VagaRequest;
+import com.aqConnecta.model.enums.AreaAtuacao;
 import com.aqConnecta.service.CompetenciaService;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -25,19 +27,20 @@ public class CompetenciaController {
     }
 
     @GetMapping("/listar")
-    public ResponseEntity<Object> listarCompetencias(@RequestParam(value = "search", required = false, defaultValue = "") String search,
-                                                     @RequestParam(value = "page", required = false, defaultValue = "0") int page,
-                                                     @RequestParam(value = "size", required = false, defaultValue = "100") int size) {
+    public ResponseEntity<Object> listarCompetencias(
+            @RequestParam(value = "search", required = false, defaultValue = "") String search,
+            @RequestParam(value = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(value = "size", required = false, defaultValue = "100") int size) {
         return service.listarCompetencias(search, page, size);
     }
 
     @PostMapping("/cadastrar")
-    public ResponseEntity<Object> cadastrarCompetencia(@RequestBody CompetenciaRequest competenciaRequest) {
+    public ResponseEntity<Object> cadastrarCompetencia(@Valid @RequestBody CompetenciaRequest competenciaRequest) {
         return service.cadastrarCompetencia(competenciaRequest);
     }
 
     @PutMapping("/alterar/{idCompetencia}")
-    public ResponseEntity<Object> alterarCompetencia(@PathVariable UUID idCompetencia, @RequestBody CompetenciaRequest competenciaRequest) {
+    public ResponseEntity<Object> alterarCompetencia(@PathVariable UUID idCompetencia, @Valid @RequestBody CompetenciaRequest competenciaRequest) {
         return service.alterarCompetencia(idCompetencia, competenciaRequest);
     }
 
@@ -47,8 +50,8 @@ public class CompetenciaController {
     }
 
     @PostMapping("/relacionar_competencia_usuario")
-    public ResponseEntity<Object> relacionarCompetenciasUsuario(@RequestBody CompetenciaUsuarioRequest competenciaUsuarioRequest) {
-        return service.relacionarCompetenciasUsuario(competenciaUsuarioRequest);
+    public ResponseEntity<Object> relacionarCompetenciasUsuario(@Valid @RequestBody CompetenciaUsuarioRequest competenciaUsuarioRequest, Authentication authentication) {
+        return service.relacionarCompetenciasUsuario(competenciaUsuarioRequest, authentication.getName());
     }
 
     @GetMapping("/listar_por_usuario/{idUsuario}")
@@ -57,13 +60,13 @@ public class CompetenciaController {
     }
 
     @DeleteMapping("/remover_relacao_usuario")
-    public ResponseEntity<Object> removerRelacaoCompetenciasUsuario(@RequestBody CompetenciaUsuarioRequest competenciaUsuarioRequest) {
-        return service.removerRelacaoCompetenciasUsuario(competenciaUsuarioRequest);
+    public ResponseEntity<Object> removerRelacaoCompetenciasUsuario(@Valid @RequestBody CompetenciaUsuarioRequest competenciaUsuarioRequest, Authentication authentication) {
+        return service.removerRelacaoCompetenciasUsuario(competenciaUsuarioRequest, authentication.getName());
     }
 
     @PostMapping("/relacionar_competencia_vaga")
-    public ResponseEntity<Object> relacionarCompetenciasVaga(@RequestBody CompetenciaVagaRequest competenciaVagaRequest) {
-        return service.relacionarCompetenciasVaga(competenciaVagaRequest);
+    public ResponseEntity<Object> relacionarCompetenciasVaga(@Valid @RequestBody CompetenciaVagaRequest competenciaVagaRequest, Authentication authentication) {
+        return service.relacionarCompetenciasVaga(competenciaVagaRequest, authentication.getName());
     }
 
     @GetMapping("/listar_por_vaga/{idVaga}")
@@ -72,8 +75,8 @@ public class CompetenciaController {
     }
 
     @DeleteMapping("/remover_relacao_vaga")
-    public ResponseEntity<Object> removerRelacaoCompetenciasVaga(@RequestBody CompetenciaVagaRequest competenciaVagaRequest) {
-        return service.removerRelacaoCompetenciasVaga(competenciaVagaRequest);
+    public ResponseEntity<Object> removerRelacaoCompetenciasVaga(@Valid @RequestBody CompetenciaVagaRequest competenciaVagaRequest, Authentication authentication) {
+        return service.removerRelacaoCompetenciasVaga(competenciaVagaRequest, authentication.getName());
     }
 
     @GetMapping("/competencias_quentes")
@@ -81,9 +84,30 @@ public class CompetenciaController {
         return service.listarCompetenciasQuentes();
     }
 
-    // TODO fazer na proxima release
-//    @GetMapping("/localizar/{idEndereco}")
-//    public ResponseEntity<Object> relacionarCompetenciasPorExperiencia(@PathVariable UUID idEndereco) {
-//        return service.localizarEndereco(idEndereco);
-//    }
+    @GetMapping("/por_area")
+    public ResponseEntity<Object> sugestoesPorArea(@RequestParam("area") AreaAtuacao area) {
+        return service.sugestoesPorArea(area);
+    }
+
+    @PostMapping("/sugerir")
+    public ResponseEntity<Object> sugerir(@Valid @RequestBody CompetenciaRequest competenciaRequest, Authentication authentication) {
+        return service.sugerir(competenciaRequest, authentication.getName());
+    }
+
+    @GetMapping("/pendentes")
+    public ResponseEntity<Object> listarPendentes(
+            @RequestParam(value = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(value = "size", required = false, defaultValue = "50") int size) {
+        return service.listarPendentes(page, size);
+    }
+
+    @PutMapping("/aprovar/{idCompetencia}")
+    public ResponseEntity<Object> aprovar(@PathVariable UUID idCompetencia) {
+        return service.aprovar(idCompetencia);
+    }
+
+    @DeleteMapping("/recusar/{idCompetencia}")
+    public ResponseEntity<Object> recusar(@PathVariable UUID idCompetencia) {
+        return service.recusar(idCompetencia);
+    }
 }

@@ -1,7 +1,8 @@
 package com.aqConnecta.DTOs.request;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import org.apache.logging.log4j.util.Strings;
 
 import java.time.LocalDateTime;
 
@@ -11,17 +12,19 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 public class ExperienciaRequest {
+
+    @NotBlank(message = "Título é obrigatório")
     private String titulo;
+
+    @NotBlank(message = "Instituição é obrigatória")
     private String instituicao;
+
+    @NotBlank(message = "Descrição é obrigatória")
     private String descricao;
-    // yyyy-MM-dd'T'HH:mm:ss
+
+    @NotNull(message = "Data de início é obrigatória")
     private LocalDateTime dataInicio;
-    // pode ser nulo
+
     private LocalDateTime dataFim;
     private boolean atualExperiencia;
-
-    public boolean validarDadosObrigatorios() {
-        return !Strings.isEmpty(titulo) && !Strings.isEmpty(instituicao) &&
-                !Strings.isEmpty(descricao) && dataInicio != null;
-    }
 }

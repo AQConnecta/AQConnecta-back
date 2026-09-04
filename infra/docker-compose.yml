@@ -1,15 +1,50 @@
-version: '3'
 volumes:
   data:
+
 services:
   db:
     image: mariadb:10.11
+    container_name: aqconnecta-db
     environment:
-      MYSQL_ROOT_PASSWORD: toor
-      MYSQL_DATABASE: aqConnecta
-      MYSQL_USER: root
-      MYSQL_PASSWORD: root
+      MARIADB_ROOT_PASSWORD: toor
+      MARIADB_DATABASE: aqConnecta
     volumes:
       - data:/var/lib/mysql
     ports:
       - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb -h 127.0.0.1 -uroot -p$$MARIADB_ROOT_PASSWORD -e 'SELECT 1' >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+  app:
+    container_name: aqconnecta-api
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_DB: aqConnecta
+      MYSQL_USER: root
+      MYSQL_PASSWORD: toor
+      JWT_SECRET: troque-isto-em-prod
+      JWT_EXPIRATION: 604800000
+      CORS_URLS: http://localhost:3000
+      FLYWAY_ENABLED: "true"
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      AWS_ACCESS_KEY: ""
+      AWS_SECRET: ""
+      BUCKET: ""
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy

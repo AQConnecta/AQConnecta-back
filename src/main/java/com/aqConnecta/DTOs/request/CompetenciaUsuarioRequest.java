@@ -1,11 +1,9 @@
 package com.aqConnecta.DTOs.request;
 
 import com.aqConnecta.model.Competencia;
-import io.jsonwebtoken.lang.Collections;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
-import org.apache.logging.log4j.util.Strings;
 
-import java.util.Collection;
 import java.util.Set;
 
 @Getter
@@ -14,9 +12,7 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class CompetenciaUsuarioRequest {
-    Set<Competencia> competencias;
 
-    public boolean validarDadosObrigatorios() {
-        return Collections.isEmpty(competencias);
-    }
+    @NotEmpty(message = "Lista de competências não pode ser vazia")
+    Set<Competencia> competencias;
 }

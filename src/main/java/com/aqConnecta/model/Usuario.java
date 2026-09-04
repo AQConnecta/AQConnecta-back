@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -55,24 +56,23 @@ public class Usuario implements Serializable {
         joinColumns = @JoinColumn(name = "ID_USUARIO", referencedColumnName = "ID"),
         inverseJoinColumns = @JoinColumn(name = "ID_COMPETENCIA", referencedColumnName = "ID")
     )
-//	@JsonManagedReference
     private Set<Competencia> competencias = new HashSet<>();
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-//	@JsonManagedReference // evitar recursao infinita
     private Set<Endereco> enderecos = new HashSet<>();
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-//	@JsonManagedReference // evitar recursao infinita
     private Set<Experiencia> experiencias = new HashSet<>();
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-//	@JsonManagedReference // evitar recursao infinita
     private Set<FormacaoAcademica> formacoesAcademicas = new HashSet<>();
 
     @Builder.Default
     @Column(name = "DELETADO")
     private Boolean deletado = false;
+
+    @Column(name = "DELETADO_EM")
+    private LocalDateTime deletadoEm;
 
     @Builder.Default
     @Column(name = "ATIVADO")
@@ -82,11 +82,7 @@ public class Usuario implements Serializable {
     private String fotoPerfil;
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "usuario")
-//	@JsonManagedReference // evitar recursão infinita
     private Set<Curriculo> curriculo = new HashSet<>();
-
-//	@OneToMany(mappedBy = "usuario", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
-//	private Set<Candidatura> candidaturas = new HashSet<>();
 
     public boolean verificarUsuarioNaoEAdministrador() {
         return this
@@ -95,5 +91,9 @@ public class Usuario implements Serializable {
             .noneMatch(permissao -> permissao
                 .getDescricao()
                 .equals(Permissao.ROLE_ADMIN));
+    }
+
+    public boolean isDeleted() {
+        return (deletadoEm != null) || (deletado != null && deletado);
     }
 }

@@ -2,6 +2,8 @@ package com.aqConnecta.repository;
 
 import com.aqConnecta.model.Usuario;
 import com.aqConnecta.model.Vaga;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +20,13 @@ public interface VagaRepository extends JpaRepository<Vaga, UUID> {
 
     List<Vaga> findByTituloContainingIgnoreCase(String titulo);
 
+    Page<Vaga> findByTituloContainingIgnoreCase(String titulo, Pageable pageable);
+
     @Query("SELECT v FROM Vaga v JOIN v.competencias c WHERE c.id = :competenciaId")
     List<Vaga> findByCompetenciaId(@Param("competenciaId") UUID competenciaId);
+
+    @Query("SELECT v FROM Vaga v JOIN v.competencias c WHERE c.id = :competenciaId")
+    Page<Vaga> findByCompetenciaId(@Param("competenciaId") UUID competenciaId, Pageable pageable);
+
+    List<Vaga> findByProjetoId(UUID projetoId);
 }

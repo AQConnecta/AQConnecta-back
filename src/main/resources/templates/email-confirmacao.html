@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>{{TITLE}} | AQConnecta</title>
+  <style>
+    :root {
+      --bg-1: #f6f8fb;
+      --bg-2: #eef1f7;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --success-soft: #dcfce7;
+      --error: #dc2626;
+      --error-soft: #fee2e2;
+      --shadow: 0 20px 50px -20px rgba(15, 23, 42, 0.15), 0 6px 16px -6px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: var(--text);
+      background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 460px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 36px 40px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      animation: cardIn 0.5s ease;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .brand-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+
+    .icon-wrap {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 28px;
+      background: var(--icon-bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: iconPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .icon-wrap::after {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      border: 2px solid var(--icon-color);
+      opacity: 0.15;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .icon-wrap svg {
+      width: 44px;
+      height: 44px;
+      stroke: var(--icon-color);
+      stroke-width: 2.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .icon-wrap svg path {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: drawCheck 0.6s 0.3s ease forwards;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      margin: 0 0 32px;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 46px;
+      padding: 0 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.1s ease, background 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 8px 20px -8px var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+    }
+
+    .footer {
+      margin-top: 36px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes iconPop {
+      0% { transform: scale(0.3); opacity: 0; }
+      60% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.15; }
+      50% { transform: scale(1.05); opacity: 0.05; }
+    }
+
+    @keyframes drawCheck {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 36px 24px 32px; border-radius: 16px; }
+      h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body style="--icon-bg: {{ICON_BG}}; --icon-color: {{ICON_COLOR}};">
+  <main class="card" role="status" aria-live="polite">
+    <div class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>AQConnecta</span>
+    </div>
+
+    <div class="icon-wrap" aria-hidden="true">
+      {{ICON_SVG}}
+    </div>
+
+    <h1>{{TITLE}}</h1>
+    <p>{{MESSAGE}}</p>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="{{ACTION_URL}}">{{ACTION_LABEL}}</a>
+    </div>
+
+    <div class="footer">
+      Precisa de ajuda? Entre em contato pelo suporte.
+    </div>
+  </main>
+</body>
+</html>

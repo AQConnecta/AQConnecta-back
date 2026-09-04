@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aqconnecta-back-ingress
+  namespace: aqconnecta
+  annotations:
+    cert-manager.io/issuer: letsencrypt
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/proxy-body-size: 64m
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # OPTIONS precisa ser explicitamente permitido pelo ingress quando há preflight CORS.
+    # O Spring trata o CORS — não habilite enable-cors aqui (duplicaria headers).
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://aqconnecta.riume.com.br"
+    nginx.ingress.kubernetes.io/enable-cors: "false"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - aqconnecta-back.riume.com.br
+      secretName: letsencrypt-nginx-cert-aqconnecta-back
+  rules:
+    - host: aqconnecta-back.riume.com.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aqconnecta-backend
+                port:
+                  number: 8080

@@ -9,8 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -26,19 +24,10 @@ public class EnderecoService {
     @Autowired
     private EnderecoRepository enderecoRepository;
 
-    public ResponseEntity<Object> cadastrarEndereco(EnderecoRequest registro) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
-        if (!registro.validarDadosObrigatorios()) {
-            return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<Object> cadastrarEndereco(EnderecoRequest registro, String emailAutenticado) {
         try {
-            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
-            Endereco endereco = new Endereco().builder()
-                    .id(UUID.randomUUID())
+            Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
+            Endereco endereco = Endereco.builder()
                     .usuario(usuario)
                     .cep(registro.getCep())
                     .rua(registro.getRua())
@@ -50,18 +39,13 @@ public class EnderecoService {
                     .complemento(registro.getComplemento())
                     .build();
             enderecoRepository.save(endereco);
-            return ResponseHandler.generateResponse("Endereco cadastrado com súcesso!", HttpStatus.CREATED, endereco);
+            return ResponseHandler.generateResponse("Endereco cadastrado com sucesso!", HttpStatus.CREATED, endereco);
         } catch (Exception e) {
-            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     public ResponseEntity<Object> listarEnderecosPorUsuario(UUID idUsuario) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
         try {
             Usuario usuario = usuarioService.localizar(idUsuario);
             Set<Endereco> enderecos = enderecoRepository.findByUsuario(usuario);
@@ -75,41 +59,26 @@ public class EnderecoService {
     }
 
     public ResponseEntity<Object> localizarEndereco(UUID idEndereco) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // TODO remover essa bosta de contains dps do riume arrumar o security
-        if (isUserAnonymous(authentication)) {
-            return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-        }
         try {
-            Optional<Endereco> experiencia = enderecoRepository.findById(idEndereco);
-            if (experiencia.isPresent()) {
-                return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, experiencia);
+            Optional<Endereco> endereco = enderecoRepository.findById(idEndereco);
+            if (endereco.isPresent()) {
+                return ResponseHandler.generateResponse("Localizado com sucesso", HttpStatus.OK, endereco);
             }
-            return ResponseHandler.generateResponse("Nenhum endereço encontrada para este ID.", HttpStatus.NOT_FOUND);
+            return ResponseHandler.generateResponse("Nenhum endereço encontrado para este ID.", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao tentar localizar o endereço.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
-
-    public ResponseEntity<Object> alterarEndereco(UUID idEndereco, EnderecoRequest registro) {
+    public ResponseEntity<Object> alterarEndereco(UUID idEndereco, EnderecoRequest registro, String emailAutenticado) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-            }
-            if (!registro.validarDadosObrigatorios() && idEndereco != null && !idEndereco.toString().isEmpty()) {
-                return ResponseHandler.generateResponse("Error: Campos obrigatorios não informados", HttpStatus.BAD_REQUEST);
-            }
-            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+            Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
             Optional<Endereco> endereco = enderecoRepository.findById(idEndereco);
             if (endereco.isPresent()) {
                 if (!endereco.get().getUsuario().getId().equals(usuario.getId())) {
-                    return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.UNAUTHORIZED);
+                    return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
                 }
-                Endereco enderecoAlterado = new Endereco()
-                        .builder()
+                Endereco enderecoAlterado = Endereco.builder()
                         .id(idEndereco)
                         .usuario(endereco.get().getUsuario())
                         .cep(registro.getCep())
@@ -122,40 +91,28 @@ public class EnderecoService {
                         .complemento(registro.getComplemento())
                         .build();
                 enderecoRepository.save(enderecoAlterado);
-                return ResponseHandler.generateResponse("Endereço atualizado com súcesso!", HttpStatus.CREATED, endereco);
+                return ResponseHandler.generateResponse("Endereço atualizado com sucesso!", HttpStatus.OK, enderecoAlterado);
             }
             return ResponseHandler.generateResponse("Erro ao encontrar o endereço!", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.NOT_FOUND);
+            return ResponseHandler.generateResponse(String.format("Error: %s", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-
-    public ResponseEntity<Object> deletarEndereco(UUID idEndereco) {
+    public ResponseEntity<Object> deletarEndereco(UUID idEndereco, String emailAutenticado) {
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            // TODO remover essa bosta de contains dps do riume arrumar o security
-            if (authentication != null && authentication.isAuthenticated() && authentication.getName().toLowerCase().contains("anonymous")) {
-                return ResponseHandler.generateResponse("Precisa estar logado para continuar.", HttpStatus.UNAUTHORIZED);
-            }
-            Usuario usuario = usuarioService.localizarPorEmail(authentication.getName());
+            Usuario usuario = usuarioService.localizarPorEmail(emailAutenticado);
             Optional<Endereco> endereco = enderecoRepository.findById(idEndereco);
             if (endereco.isPresent()) {
                 if (!endereco.get().getUsuario().getId().equals(usuario.getId())) {
                     return ResponseHandler.generateResponse("Error: Você não tem permissão para alterar esse registro.", HttpStatus.FORBIDDEN);
                 }
                 enderecoRepository.deleteById(idEndereco);
-            } else {
-                return ResponseHandler.generateResponse("Não é possível excluir uma experiencia não existente.", HttpStatus.NOT_FOUND);
+                return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
             }
-            return ResponseHandler.generateResponse("Deletado com sucesso", HttpStatus.OK);
+            return ResponseHandler.generateResponse("Não é possível excluir um endereço não existente.", HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao tentar excluir o endereço.", HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
-
-    private boolean isUserAnonymous(Authentication authentication) {
-        return authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName());
-    }
-
 }
