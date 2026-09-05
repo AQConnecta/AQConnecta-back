@@ -29,7 +29,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: backend
-          image: docker.io/riume/aqconnecta-backend:20
+          image: harbor.200.134.21.86.nip.io/aqconnecta/aqconnecta-backend:latest
           imagePullPolicy: IfNotPresent
           workingDir: /tmp
           env:
