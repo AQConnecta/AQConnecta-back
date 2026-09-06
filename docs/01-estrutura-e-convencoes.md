@@ -31,7 +31,7 @@ aqconnecta/                     # repo-raiz (orquestração)
 |---|---|
 | **Backend** (`AQConnecta-back`) | Spring Boot 3.3.5, Java 21, Maven, MariaDB 11.4, Flyway (migrations), JWT (jjwt), Lombok, Micrometer (Prometheus + tracing OTLP) |
 | **Frontend** (`AQConnecta-front`) | React 18, Vite, TypeScript, TailwindCSS, Radix UI, axios, React Router, TipTap (rich text), sonner (toasts) |
-| **Infra** | Docker, Kubernetes, Gateway API (Envoy Gateway), Prometheus/Grafana/Tempo (observabilidade), Harbor (registry) |
+| **Infra** | Docker, Kubernetes, Gateway API (Envoy Gateway), Harbor (registry) |
 
 ## 1.3 Convenções que você precisa saber
 
@@ -58,10 +58,8 @@ aqconnecta/                     # repo-raiz (orquestração)
 
 - `AQConnecta-back/src/main/java/com/aqConnecta/` → `controller/`, `service/`, `model/`,
   `DTOs/`, `repository/`, `config/` (Security etc.).
-- `AQConnecta-back/k8s/` → manifests do cluster **Qualicloud** (teste).
-- `AQConnecta-back/k8s-dacom/` → manifests do cluster **DACOM** (produção): `backend/`,
-  `frontend/`, `database/`, `gateway/`, `acme/` (TLS Let's Encrypt), `monitoring/`
-  (Prometheus/Grafana/Tempo/alertas), `harbor/` (registry), `azure-agent/`.
+- `AQConnecta-back/k8s/` → manifests Kubernetes de produção: `backend/`, `frontend/` e
+  `database/` (além de `namespace.yaml` e `kustomization.yaml`).
 - `AQConnecta-back/.github/workflows/` e `AQConnecta-front/.github/workflows/` → pipelines CI/CD.
 - `AQConnecta-front/src/` → `pages/`, `components/`, `services/endpoints/` (chamadas de API),
   `contexts/`, `hooks/`, `routes/`.

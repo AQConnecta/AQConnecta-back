@@ -4,19 +4,12 @@
 
 ## 3.1 Arquitetura
 
-A aplicação roda em **Kubernetes**. Existem dois conjuntos de manifests:
+A aplicação roda em **Kubernetes** (cluster **DACOM**). Os manifests ficam em
+`AQConnecta-back/k8s/` (`backend/`, `frontend/`, `database/`).
 
-- `AQConnecta-back/k8s/` → cluster **Qualicloud** (teste).
-- `AQConnecta-back/k8s-dacom/` → cluster **DACOM** (produção).
-
-No DACOM:
-- **Ingress**: **Envoy Gateway** (Gateway API), com TLS **Let's Encrypt** renovado
-  automaticamente (`k8s-dacom/acme/`).
-- **Registry**: **Harbor** privado no próprio cluster — `https://harbor.200.134.21.86.nip.io`
-  (`k8s-dacom/harbor/`). Alternativa: Docker Hub (`docker.io/riume/aqconnecta-backend` e `-frontend`).
-- **Observabilidade**: Grafana em `https://<host>/observability` — dashboards de Negócios,
-  SRE/SLO, Servidor e Traces, com alertas 4XX/5XX por e-mail
-  ([detalhes](../AQConnecta-back/k8s-dacom/monitoring/README.md)).
+- **Ingress**: **Envoy Gateway** (Gateway API), com TLS **Let's Encrypt**.
+- **Registry**: **Harbor** — `https://harbor.200.134.21.86.nip.io`. Alternativa: Docker Hub
+  (`docker.io/riume/aqconnecta-backend` e `-frontend`).
 
 ## 3.2 Deploy manual
 

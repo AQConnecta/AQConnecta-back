@@ -10,7 +10,7 @@ Se você está entrando no projeto, leia nesta ordem:
 |---|---|---|
 | 1 | [Estrutura e convenções](01-estrutura-e-convencoes.md) | Como o repositório é organizado, a stack, as convenções de código e um mapa de pastas. **Leia antes de mexer em qualquer coisa.** |
 | 2 | [Rodar localmente](02-rodar-localmente.md) | Subir o projeto na sua máquina (Docker Compose ou cada app separado). |
-| 3 | [Produção](03-producao.md) | Como a aplicação roda em produção (Kubernetes, registry, TLS, observabilidade) e como fazer deploy manual. |
+| 3 | [Produção](03-producao.md) | Como a aplicação roda em produção (Kubernetes, registry, TLS) e como fazer deploy manual. |
 | 4 | [CI/CD (GitHub Actions)](04-cicd.md) | As pipelines automatizadas de front e back, secrets necessários e o fluxo de entrega. |
 
 ## O que é o projeto
