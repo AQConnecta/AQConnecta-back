@@ -2,6 +2,7 @@ package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.ComentarioRequest;
 import com.aqConnecta.service.ComentarioService;
+import com.aqConnecta.security.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,10 +27,9 @@ public class ComentarioController {
             @PathVariable UUID idProjeto,
             @PathVariable UUID idPost,
             @RequestParam(value = "page", required = false, defaultValue = "0") int page,
-            @RequestParam(value = "size", required = false, defaultValue = "20") int size,
-            Authentication authentication) {
+            @RequestParam(value = "size", required = false, defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return service.listar(idProjeto, idPost, authentication.getName(), pageable);
+        return service.listar(idProjeto, idPost, SecurityUtils.getAuthenticatedEmail(), pageable);
     }
 
     @PostMapping

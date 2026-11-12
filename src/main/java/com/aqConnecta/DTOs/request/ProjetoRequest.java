@@ -2,6 +2,7 @@ package com.aqConnecta.DTOs.request;
 
 import com.aqConnecta.model.enums.StatusProjeto;
 import com.aqConnecta.model.enums.VisibilidadeProjeto;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -34,6 +35,7 @@ public class ProjetoRequest {
 
     private UUID idUniversidade;
 
+    @Valid
     @Builder.Default
     private List<ProjetoLinkRequest> links = new ArrayList<>();
 }

@@ -68,6 +68,7 @@ public class SecurityConfig {
 
         http.authorizeHttpRequests(requests -> requests
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            .requestMatchers("/error").permitAll()
 
             .requestMatchers("/auth/**").permitAll()
             .requestMatchers("/usuario/registrar").permitAll()

@@ -362,7 +362,7 @@ public class UsuarioService {
                 .orElseThrow(() -> new Exception("Currículo não encontrado"));
 
             usuario.getCurriculo().remove(curriculoParaRemover);
-            usuarioRepository.save(usuario);
+            curriculoRepository.delete(curriculoParaRemover);
             return ResponseHandler.generateResponse("Currículo removido com sucesso", HttpStatus.OK);
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Houve um erro ao remover o currículo.",

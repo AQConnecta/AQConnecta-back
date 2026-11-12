@@ -23,8 +23,10 @@ public class VagaRequest {
     private String titulo;
 
     @NotBlank(message = "Descrição é obrigatória")
+    @Size(max = 10000, message = "Descrição deve ter no máximo 10000 caracteres")
     private String descricao;
 
+    @Size(max = 200, message = "Local deve ter no máximo 200 caracteres")
     private String localDaVaga;
     private boolean aceitaRemoto;
     private LocalDateTime dataLimiteCandidatura;

@@ -3,6 +3,7 @@ package com.aqConnecta.DTOs.request;
 import com.aqConnecta.model.Universidade;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -21,9 +22,10 @@ public class FormacaoAcademicaRequest {
     private Universidade universidade;
 
     @NotBlank(message = "Descrição é obrigatória")
+    @Size(max = 255, message = "Descrição deve ter no máximo 255 caracteres")
     private String descricao;
 
-    /** Opcional: nome/tipo do diploma. Pode ser preenchido depois. */
+    @Size(max = 255, message = "Diploma deve ter no máximo 255 caracteres")
     private String diploma;
 
     @NotNull(message = "Data de início é obrigatória")

@@ -2,6 +2,7 @@ package com.aqConnecta.controller;
 
 import com.aqConnecta.DTOs.request.PostagemRequest;
 import com.aqConnecta.service.PostagemService;
+import com.aqConnecta.security.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,15 +32,14 @@ public class PostagemController {
     public ResponseEntity<Object> listar(
             @PathVariable UUID idProjeto,
             @RequestParam(value = "page", required = false, defaultValue = "0") int page,
-            @RequestParam(value = "size", required = false, defaultValue = "10") int size,
-            Authentication authentication) {
+            @RequestParam(value = "size", required = false, defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return service.listar(idProjeto, authentication.getName(), pageable);
+        return service.listar(idProjeto, SecurityUtils.getAuthenticatedEmail(), pageable);
     }
 
     @GetMapping("/{idPost}")
-    public ResponseEntity<Object> localizar(@PathVariable UUID idProjeto, @PathVariable UUID idPost, Authentication authentication) {
-        return service.localizar(idProjeto, idPost, authentication.getName());
+    public ResponseEntity<Object> localizar(@PathVariable UUID idProjeto, @PathVariable UUID idPost) {
+        return service.localizar(idProjeto, idPost, SecurityUtils.getAuthenticatedEmail());
     }
 
     @PutMapping("/{idPost}")
@@ -63,7 +63,7 @@ public class PostagemController {
     }
 
     @GetMapping("/{idPost}/midia/{filename:.+}")
-    public ResponseEntity<?> servirMidia(@PathVariable UUID idProjeto, @PathVariable UUID idPost, @PathVariable String filename, Authentication authentication) {
-        return service.carregarMidia(idProjeto, idPost, filename, authentication.getName());
+    public ResponseEntity<?> servirMidia(@PathVariable UUID idProjeto, @PathVariable UUID idPost, @PathVariable String filename) {
+        return service.carregarMidia(idProjeto, idPost, filename, SecurityUtils.getAuthenticatedEmail());
     }
 }

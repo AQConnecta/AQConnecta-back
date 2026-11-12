@@ -3,6 +3,7 @@ package com.aqConnecta.controller;
 import com.aqConnecta.DTOs.request.ProjetoRequest;
 import com.aqConnecta.model.enums.StatusProjeto;
 import com.aqConnecta.service.ProjetoService;
+import com.aqConnecta.security.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,8 +46,8 @@ public class ProjetoController {
     }
 
     @GetMapping("/localizar/{idProjeto}")
-    public ResponseEntity<Object> localizar(@PathVariable UUID idProjeto, Authentication authentication) {
-        return service.localizar(idProjeto, authentication.getName());
+    public ResponseEntity<Object> localizar(@PathVariable UUID idProjeto) {
+        return service.localizar(idProjeto, SecurityUtils.getAuthenticatedEmail());
     }
 
     @PutMapping("/alterar/{idProjeto}")
@@ -90,7 +91,7 @@ public class ProjetoController {
     }
 
     @GetMapping("/{idProjeto}/midia/{filename:.+}")
-    public ResponseEntity<?> servirMidia(@PathVariable UUID idProjeto, @PathVariable String filename, Authentication authentication) {
-        return service.carregarMidia(idProjeto, filename, authentication.getName());
+    public ResponseEntity<?> servirMidia(@PathVariable UUID idProjeto, @PathVariable String filename) {
+        return service.carregarMidia(idProjeto, filename, SecurityUtils.getAuthenticatedEmail());
     }
 }
